@@ -121,6 +121,12 @@ class $AssetsImagePngGen {
   AssetGenImage get mentorOnboarding =>
       const AssetGenImage('assets/image/png/mentor_onboarding.png');
 
+  /// File path: assets/image/png/portrait-fashion-model-girl-studio-130864352.webp
+  AssetGenImage get portraitFashionModelGirlStudio130864352 =>
+      const AssetGenImage(
+        'assets/image/png/portrait-fashion-model-girl-studio-130864352.webp',
+      );
+
   /// File path: assets/image/png/rekomendasi_onboarding.png
   AssetGenImage get rekomendasiOnboarding =>
       const AssetGenImage('assets/image/png/rekomendasi_onboarding.png');
@@ -130,6 +136,7 @@ class $AssetsImagePngGen {
     gabungyukLogo,
     kolaborasiOnboarding,
     mentorOnboarding,
+    portraitFashionModelGirlStudio130864352,
     rekomendasiOnboarding,
   ];
 }

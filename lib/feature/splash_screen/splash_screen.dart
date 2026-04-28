@@ -29,9 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // push navigation
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const OnboardingPage(),
-        ),
+        MaterialPageRoute(builder: (context) => const OnboardingPage()),
       );
 
       // Navigate.navigatorPushAndRemove(
@@ -66,11 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  Assets.image.png.gabungyukLogo.path,
-                )
-              ],
+              children: [Image.asset(Assets.image.png.gabungyukLogo.path)],
             ),
           ),
         ),

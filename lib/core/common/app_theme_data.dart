@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/typography.dart';
 import 'color_value.dart';
@@ -31,8 +30,10 @@ class AppThemeData {
       800: primaryColor,
       900: primaryColor,
     };
-    final MaterialColor primaryMaterialColor =
-    MaterialColor(primaryColor.value, primaryColorMap);
+    final MaterialColor primaryMaterialColor = MaterialColor(
+      primaryColor.value,
+      primaryColorMap,
+    );
 
     return ThemeData(
       primaryColor: primaryColor,
@@ -48,11 +49,10 @@ class AppThemeData {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: ColorValue.secondaryColor,
+          foregroundColor: Colors.white,
+          backgroundColor: ColorValue.secondaryColor,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: typography.Medium.copyWith(
             color: Colors.white,
             fontSize: 14,
@@ -70,27 +70,30 @@ class AppThemeData {
           color: Colors.black,
           fontSize: 20,
         ),
-        displaySmall:  typography.Regular.copyWith(
+        displaySmall: typography.Regular.copyWith(
           color: Colors.black,
           fontSize: 16,
         ),
-        headlineMedium:  typography.Regular.copyWith(
+        headlineMedium: typography.Regular.copyWith(
           color: Colors.black,
           fontSize: 14,
         ),
-        titleLarge:  typography.Regular.copyWith(
+        titleLarge: typography.Regular.copyWith(
           color: Colors.black,
           fontSize: 16,
         ),
-        bodyLarge:  typography.Regular.copyWith(
+        bodyLarge: typography.Regular.copyWith(
           color: ColorValue.greyColor,
           fontSize: 12,
         ),
-        bodyMedium:  typography.Regular.copyWith  (
+        bodyMedium: typography.Regular.copyWith(
           color: ColorValue.greyColor,
           fontSize: 10,
         ),
-      ), colorScheme: ColorScheme.fromSwatch(primarySwatch: primaryMaterialColor).copyWith(surface: Colors.white),
+      ),
+      colorScheme: ColorScheme.fromSwatch(
+        primarySwatch: primaryMaterialColor,
+      ).copyWith(surface: Colors.white),
     );
   }
 }

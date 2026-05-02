@@ -45,5 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Camera Permission -->
+	<key>NSCameraUsageDescription</key>
+	<string>Aplikasi membutuhkan akses ke kamera untuk mengambil foto profil Anda.</string>
+
+	<!-- Photo Library Permission -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplikasi membutuhkan akses ke galeri foto Anda untuk memilih foto profil.</string>
+
+	<!-- Photo Library Add Permission (iOS 11+) -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Aplikasi membutuhkan izin untuk menyimpan foto ke galeri Anda.</string>
 </dict>
 </plist>

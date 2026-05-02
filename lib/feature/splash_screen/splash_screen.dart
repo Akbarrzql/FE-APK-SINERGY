@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/common/shared_code.dart';
 import '../../../../core/gen/assets.gen.dart';
+import '../../core/widget/bottom_navigation.dart';
+import '../auth/login/login_screen.dart';
 import '../onboarding/onboarding_page.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,33 +16,49 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // Future<bool> _checkOnBoardingStatus() async {
-  //   String value = await SharedCode().getToken('token');
-  //   if (value == '') {
-  //     return false;
-  //   } else {
-  //     return true;
-  //   }
-  // }
+  final SharedCode _sharedCode = SharedCode();
+
+  Future<void> _routeAfterSplash() async {
+    final token = await _sharedCode.getAuthToken();
+    if (!mounted) return;
+
+    if (token.isEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OnboardingPage(),
+        ),
+      );
+      return;
+    }
+
+    final isExpired = await _sharedCode.isAuthSessionExpired();
+    if (!mounted) return;
+
+    if (isExpired) {
+      await _sharedCode.clearAuthSession();
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BottomNavigation(),
+      ),
+    );
+  }
 
   Future _startSplashScreen() async {
     var duration = const Duration(seconds: 3);
-    // bool status = await _checkOnBoardingStatus();
     return Timer(duration, () {
-      // push navigation
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const OnboardingPage()),
-      );
-
-      // Navigate.navigatorPushAndRemove(
-      //   context,
-      //   FirebaseAuth.instance.currentUser == null
-      //       ? status
-      //       ? const LoginPage()
-      //       : const OnBoardingScreen()
-      //       : const VerificationPage(),
-      // );
+      _routeAfterSplash();
     });
   }
 

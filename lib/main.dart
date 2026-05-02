@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/common/app_navigator.dart';
 import 'package:gabungyuk/feature/splash_screen/splash_screen.dart';
-import 'package:gabungyuk/feature/profile/presentation/screens/profile_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,6 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
         useMaterial3: false,
       ),
-      home: const ProfileScreen(),
+      home: const SplashScreen(),
     );
   }
 }

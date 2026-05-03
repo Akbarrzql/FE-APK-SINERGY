@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:gabungyuk/core/common/api_config.dart';
-import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
-import 'dart:convert';
+import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/auth/model/register_model/register_model.dart';
 import 'package:http/http.dart' as http;
 
@@ -30,11 +32,12 @@ class RegisterRepositoryImpl implements RegisterRepository {
       headers: {
         HttpHeaders.contentTypeHeader: 'application/json',
       },
-      body: '{"username": "$name", "email": "$email", "password": "$password"}',
+      body: jsonEncode({
+        'namaLengkap': name,
+        'email': email,
+        'password': password,
+      }),
     );
-
-    print(response.body);
-    print(response.statusCode);
 
     if (response.statusCode == 200) {
       final registerModel = registerModelFromJson(response.body);
@@ -42,6 +45,13 @@ class RegisterRepositoryImpl implements RegisterRepository {
         token: registerModel.data.token,
         expiredAt: registerModel.data.expiredAt,
       );
+
+      await _syncUserToFirestore(
+        name: name,
+        email: email,
+        provider: 'email_password',
+      );
+
       return registerModel;
     } else {
       String message = 'Terjadi kesalahan. Silakan coba lagi.';
@@ -67,6 +77,29 @@ class RegisterRepositoryImpl implements RegisterRepository {
       }
 
       throw ApiException(message, response.statusCode);
+    }
+  }
+
+  Future<void> _syncUserToFirestore({
+    required String name,
+    required String email,
+    required String provider,
+  }) async {
+    try {
+      final existing = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
+      final uid = existing == null ? email : (existing['uid']?.toString().isNotEmpty == true ? existing['uid'].toString() : email);
+
+      await FirebaseUserSyncHelper.instance.upsertUserDoc(
+        uid: uid,
+        email: email,
+        fullName: name,
+        provider: provider,
+        hasLocalPassword: true,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Firestore sync failed for $email: $e');
+      }
     }
   }
 }

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_state.dart';
 import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
+import '../service/firebase_integration_service.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
 
 import '../../../../core/gen/assets.gen.dart';
 import '../../../../core/gen/fonts.gen.dart';
@@ -39,6 +44,37 @@ class _LoginScreenState extends State<LoginScreen> {
     _loginPageBloc = LoginPageBloc(
       loginRepository: LoginRepositoryImpl(),
     );
+  }
+
+  // Try signing in to Firebase but ignore any errors — we only want a local
+  // Firebase session when backend login succeeded.
+  void _safeFirebaseSignIn(String email, String password) {
+    () async {
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      } catch (e) {
+        try {
+          final userData = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
+          final provider = userData?['provider']?.toString() ?? '';
+          final googleUid = userData?['google_uid']?.toString() ?? '';
+          if (provider == 'google' && googleUid.isNotEmpty) {
+            final secret = FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: email,
+              password: secret,
+            );
+            return;
+          }
+        } catch (fallbackError) {
+          if (kDebugMode) debugPrint('SAFE FIREBASE SIGNIN FALLBACK IGNORED: $fallbackError');
+        }
+
+        if (kDebugMode) debugPrint('SAFE FIREBASE SIGNIN IGNORED: $e');
+      }
+    }();
   }
 
   @override
@@ -81,6 +117,12 @@ class _LoginScreenState extends State<LoginScreen> {
           listener: (context, state) {
             if (state is LoginPageLoaded) {
               FocusManager.instance.primaryFocus?.unfocus();
+
+              // Try to sign in to Firebase with the same credentials so Firebase
+              // session exists locally. If it fails we ignore and proceed with
+              // navigation because backend login already succeeded.
+              _safeFirebaseSignIn(_emailController.text.trim(), _passwordController.text);
+
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -193,7 +235,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // TODO: forgot password
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ForgotPasswordScreen(),
+                          ),
+                        );
                       },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
@@ -244,9 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
-                      onPressed: () {
-                        // TODO: login google
-                      },
+
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: const BorderSide(
@@ -257,20 +302,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Masuk dengan Google',
-                            style: TextStyle(
-                              fontFamily: FontFamily.poppins,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: _titleColor,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Masuk dengan Google',
+                                style: TextStyle(
+                                  fontFamily: FontFamily.poppins,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: _titleColor,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                          onPressed: () async {
+                            try {
+                              await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.toString())),
+                              );
+                            }
+                          },
                     ),
                   ),
 

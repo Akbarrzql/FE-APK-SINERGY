@@ -18,7 +18,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _syncEmailController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  // form key not needed for simple email sender; kept for future use
   final _syncFormKey = GlobalKey<FormState>();
   bool _loading = false;
   final SharedCode _sharedCode = SharedCode();

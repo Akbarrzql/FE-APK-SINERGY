@@ -1,111 +1,195 @@
-import 'dart:convert';
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
-import 'package:gabungyuk/core/common/api_config.dart';
-import 'package:gabungyuk/core/common/shared_code.dart';
+import 'package:gabungyuk/core/common/api_exception.dart';
+import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
+import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
+import 'package:gabungyuk/feature/auth/repository/register_repository/register_repository.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseIntegrationService {
   FirebaseIntegrationService._();
   static final FirebaseIntegrationService instance = FirebaseIntegrationService._();
 
-  final SharedCode _sharedCode = SharedCode();
-
-  /// Sign in with Google using Firebase, then send the Firebase ID token to
-  /// backend to create or login the user there. Backend must expose an
-  /// endpoint to accept Firebase ID tokens and return the app session token.
-  ///
-  /// Expected backend request: POST ${ApiConfig.baseUrl}/api/v1/users/firebase
-  /// body: { "idToken": "<firebase-id-token>", "email": "...", "name": "..." }
-  /// Expected backend response: JSON containing app token and expiry, e.g.
-  /// { "data": { "token": "...", "expiredAt": 1234567890 }, "message": "..." }
   Future<void> signInWithGoogleAndSync(BuildContext context) async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        // user canceled
-        return;
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN: starting');
+
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Gagal mendapatkan ID Token dari Google');
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      final accessToken = googleAuth.accessToken;
+      final String email = googleUser.email;
+      final String fullName = googleUser.displayName ?? '';
+      final String googleUid = googleUser.id;
+      final String backendSecret = FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
 
-      if (idToken == null) {
-        throw Exception('Gagal mendapatkan token dari Google.');
+      if (kDebugMode) {
+        debugPrint('GOOGLE SIGNIN: email=$email');
+        debugPrint('GOOGLE SIGNIN: name=$fullName');
+        debugPrint('GOOGLE SIGNIN: googleUid=$googleUid');
+        debugPrint('GOOGLE SIGNIN: idToken retrieved');
       }
 
-      // Sign in to Firebase with the Google credentials so Firebase session is established locally
-      final credential = GoogleAuthProvider.credential(
-        accessToken: accessToken,
-        idToken: idToken,
+      final AuthCredential credential = GoogleAuthProvider.credential(idToken: idToken);
+
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final User? firebaseUser = userCredential.user;
+      if (firebaseUser == null) {
+        throw Exception('Firebase user tidak ditemukan setelah Google sign-in');
+      }
+
+      await FirebaseUserSyncHelper.instance.upsertUserDoc(
+        uid: firebaseUser.uid,
+        email: email,
+        fullName: fullName,
+        provider: 'google',
+        googleUid: googleUid,
+        hasLocalPassword: false,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      await _linkEmailPasswordCredential(firebaseUser, email, backendSecret);
 
-      // Send idToken to backend to create/update user and return app token
-      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/users/firebase');
-      final payload = {
-        'idToken': idToken,
-        'email': googleUser.email,
-        'name': googleUser.displayName,
+      await _syncToBackend(
+        email: email,
+        fullName: fullName,
+        backendSecret: backendSecret,
+      );
+
+      if (!context.mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BottomNavigation()),
+      );
+    } on ApiException catch (e) {
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN API ERROR: $e');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } on GoogleSignInException catch (e) {
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN GOOGLE ERROR: ${e.code} ${e.description}');
+      if (!context.mounted) return;
+
+      final message = switch (e.code) {
+        GoogleSignInExceptionCode.providerConfigurationError =>
+          'Google Play Services di perangkat Anda perlu diperbarui. Coba update Play Services atau pakai perangkat/emulator dengan Google Play Services terbaru.',
+        GoogleSignInExceptionCode.canceled => 'Login Google dibatalkan.',
+        GoogleSignInExceptionCode.interrupted => 'Login Google terhenti. Silakan coba lagi.',
+        _ => e.description ?? 'Terjadi kesalahan saat login Google.',
       };
 
-      if (kDebugMode) {
-        debugPrint('FIREBASE INTEGRATION DEBUG: POST $url');
-        debugPrint('FIREBASE INTEGRATION DEBUG: payload=${jsonEncode(payload)}');
-      }
-
-      final resp = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(payload),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 5),
+        ),
       );
-
-      if (kDebugMode) {
-        debugPrint('FIREBASE INTEGRATION DEBUG: status=${resp.statusCode} body=${resp.body}');
-      }
-
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        try {
-          final Map<String, dynamic> json = jsonDecode(resp.body);
-          final data = json['data'] ?? json;
-          final token = data['token']?.toString() ?? '';
-          final expiredAt = (data['expiredAt'] is int) ? data['expiredAt'] : int.tryParse('${data['expiredAt']}') ?? 0;
-
-          if (token.isNotEmpty) {
-            await _sharedCode.saveAuthSession(token: token, expiredAt: expiredAt);
-          }
-
-          // Navigate to app main screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const BottomNavigation()),
-          );
-        } catch (e) {
-          throw Exception('Respons backend tidak dapat diproses: $e');
-        }
-      } else {
-        // show server error if any
-        String message = 'Gagal sinkronisasi dengan server.';
-        try {
-          final Map<String, dynamic> json = jsonDecode(resp.body);
-          if (json.containsKey('message')) message = json['message'].toString();
-          else if (json.containsKey('error')) message = json['error'].toString();
-          else if (json.containsKey('details')) message = json['details'].toString();
-        } catch (_) {}
-
-        throw Exception(message);
-      }
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN FIREBASE ERROR: ${e.code} ${e.message}');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_firebaseAuthMessage(e)),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } on SocketException {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Tidak ada koneksi internet'),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     } catch (e) {
-      if (kDebugMode) debugPrint('FIREBASE INTEGRATION ERROR: $e');
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN ERROR: $e');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login gagal: $e'),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  Future<void> _syncToBackend({
+    required String email,
+    required String fullName,
+    required String backendSecret,
+  }) async {
+    try {
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN: registering backend account for $email');
+      await RegisterRepositoryImpl().registerUser(
+        name: fullName,
+        email: email,
+        password: backendSecret,
+      );
+    } on ApiException catch (e) {
+      if (e.statusCode == 409 || _looksLikeDuplicate(e.message)) {
+        if (kDebugMode) debugPrint('GOOGLE SIGNIN: backend account exists, login instead for $email');
+        await LoginRepositoryImpl().loginUser(
+          email: email,
+          password: backendSecret,
+        );
+        return;
+      }
       rethrow;
     }
   }
-}
 
+  Future<void> _linkEmailPasswordCredential(
+    User firebaseUser,
+    String email,
+    String password,
+  ) async {
+    try {
+      await firebaseUser.linkWithCredential(
+        EmailAuthProvider.credential(email: email, password: password),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'provider-already-linked' ||
+          e.code == 'email-already-in-use' ||
+          e.code == 'credential-already-in-use') {
+        return;
+      }
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN: linkWithCredential ignored: ${e.code} ${e.message}');
+    }
+  }
+
+  bool _looksLikeDuplicate(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('duplicate') ||
+        lower.contains('sudah') ||
+        lower.contains('exists') ||
+        lower.contains('email');
+  }
+
+  String _firebaseAuthMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'account-exists-with-different-credential':
+        return 'Akun sudah ada dengan metode login lain.';
+      case 'invalid-credential':
+        return 'Kredensial Google tidak valid.';
+      case 'network-request-failed':
+        return 'Koneksi internet gagal.';
+      default:
+        return e.message ?? 'Terjadi kesalahan saat login Google.';
+    }
+  }
+}

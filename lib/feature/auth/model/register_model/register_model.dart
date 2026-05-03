@@ -34,32 +34,56 @@ class RegisterModel {
 
 class Data {
   int userId;
-  String username;
   String email;
   String token;
   int expiredAt;
+  String namaLengkap;
+  dynamic profilePicture;
+  dynamic institusi;
+  dynamic bio;
+  dynamic keahlian;
+  dynamic lokasi;
+  dynamic whatsapp;
 
   Data({
     required this.userId,
-    required this.username,
     required this.email,
     required this.token,
     required this.expiredAt,
+    required this.namaLengkap,
+    required this.profilePicture,
+    required this.institusi,
+    required this.bio,
+    required this.keahlian,
+    required this.lokasi,
+    required this.whatsapp,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
     userId: json["userId"],
-    username: json["username"],
     email: json["email"],
     token: json["token"],
     expiredAt: json["expiredAt"],
+    namaLengkap: json["namaLengkap"],
+    profilePicture: json["profilePicture"],
+    institusi: json["institusi"],
+    bio: json["bio"],
+    keahlian: json["keahlian"],
+    lokasi: json["lokasi"],
+    whatsapp: json["whatsapp"],
   );
 
   Map<String, dynamic> toJson() => {
     "userId": userId,
-    "username": username,
     "email": email,
     "token": token,
     "expiredAt": expiredAt,
+    "namaLengkap": namaLengkap,
+    "profilePicture": profilePicture,
+    "institusi": institusi,
+    "bio": bio,
+    "keahlian": keahlian,
+    "lokasi": lokasi,
+    "whatsapp": whatsapp,
   };
 }

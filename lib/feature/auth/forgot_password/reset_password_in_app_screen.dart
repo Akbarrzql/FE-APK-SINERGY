@@ -41,42 +41,42 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
     }
   }
 
-  Future<void> _submitNewPassword() async {
-    final newPwd = _newPasswordController.text;
-    final confirm = _confirmController.text;
-    if (newPwd.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password minimal 6 karakter')));
-      return;
-    }
-    if (newPwd != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password tidak cocok')));
-      return;
-    }
-    if (_email == null) return;
+   Future<void> _submitNewPassword() async {
+     final newPwd = _newPasswordController.text;
+     final confirm = _confirmController.text;
+     if (newPwd.length < 6) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password minimal 6 karakter')));
+       return;
+     }
+     if (newPwd != confirm) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password tidak cocok')));
+       return;
+     }
+     if (_email == null) return;
 
-    try {
-      setState(() => _loading = true);
-      // Confirm password reset with Firebase using oobCode
-      await FirebaseAuth.instance.confirmPasswordReset(code: widget.oobCode, newPassword: newPwd);
+     try {
+       setState(() => _loading = true);
 
-      // Sign in to Firebase to ensure credentials work
-      await FirebaseAuth.instance.signInWithEmailAndPassword(email: _email!, password: newPwd);
+       // Confirm password reset with Firebase using oobCode
+       if (kDebugMode) debugPrint('RESET PASSWORD: Confirming Firebase password reset for $_email');
+       await FirebaseAuth.instance.confirmPasswordReset(code: widget.oobCode, newPassword: newPwd);
 
-      // Update backend password via existing profile update endpoint
-      final repo = ProfileRepositoryImpl();
-      await repo.updateProfile({'password': newPwd});
+       // Update backend password via existing profile update endpoint
+       if (kDebugMode) debugPrint('RESET PASSWORD: Syncing password to backend for $_email');
+       final repo = ProfileRepositoryImpl();
+       await repo.updateProfile({'password': newPwd});
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password berhasil diubah dan disinkronkan. Silakan masuk.')));
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('confirmPasswordReset error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengganti password: $e')));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password berhasil diubah dan disinkronkan. Silakan masuk kembali.')));
+         Navigator.of(context).popUntil((route) => route.isFirst);
+       }
+     } catch (e) {
+       if (kDebugMode) debugPrint('confirmPasswordReset error: $e');
+       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengganti password: $e')));
+     } finally {
+       if (mounted) setState(() => _loading = false);
+     }
+   }
 
   @override
   Widget build(BuildContext context) {

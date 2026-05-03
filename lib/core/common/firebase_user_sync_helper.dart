@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 
@@ -22,8 +23,13 @@ class FirebaseUserSyncHelper {
     String? googleUid,
     bool hasLocalPassword = true,
   }) async {
-    final ref = _firestore.collection('users').doc(uid);
+    final docId = email.trim();
+    final ref = _firestore.collection('users').doc(docId);
+    if (kDebugMode) {
+      debugPrint('FIRESTORE SYNC: upserting users/$docId (uid=$uid, provider=$provider)');
+    }
     await ref.set({
+      'uid': uid,
       'email': email,
       'full_name': fullName,
       'provider': provider,
@@ -35,11 +41,12 @@ class FirebaseUserSyncHelper {
   }
 
   Future<Map<String, dynamic>?> findUserByEmail(String email) async {
-    final snapshot = await _firestore
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .limit(1)
-        .get();
+    final docSnapshot = await _firestore.collection('users').doc(email.trim()).get();
+    if (docSnapshot.exists) {
+      return docSnapshot.data();
+    }
+
+    final snapshot = await _firestore.collection('users').where('email', isEqualTo: email).limit(1).get();
 
     if (snapshot.docs.isEmpty) {
       return null;

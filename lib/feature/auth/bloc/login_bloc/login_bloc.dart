@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
@@ -24,6 +26,7 @@ class LoginPageBloc extends Bloc<LoginPageEvent, LoginPageState> {
         if (e is ApiException) {
           emit(LoginPageError(e.message));
         } else {
+          if (kDebugMode) print('Login BLoC unexpected error: $e');
           emit(LoginPageError('Terjadi kesalahan. Silakan coba lagi.'));
         }
       }

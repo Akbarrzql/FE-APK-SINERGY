@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
@@ -7,6 +8,9 @@ import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
 import '../../../../core/gen/assets.gen.dart';
 import '../../../../core/gen/fonts.gen.dart';
 import '../../../core/common/shared_code.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../service/firebase_integration_service.dart';
 import '../../../core/widget/bottom_navigation.dart';
 import '../login/login_screen.dart';
 import '../repository/register_repository/register_repository.dart';
@@ -40,6 +44,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // Create Firebase account safely without awaiting; ignore errors (account may already exist)
+  void _safeFirebaseCreateUser(String email, String password) {
+    () async {
+      try {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      } catch (e) {
+        if (kDebugMode) debugPrint('SAFE FIREBASE CREATE IGNORED: $e');
+      }
+    }();
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -58,14 +76,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         body: BlocConsumer<RegisterPageBloc, RegisterPageState>(
           listener: (context, state) {
             if (state is RegisterPageLoaded) {
-              FocusManager.instance.primaryFocus?.unfocus();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BottomNavigation(),
-                ),
-              );
-            } else if (state is RegisterPageError) {
+               FocusManager.instance.primaryFocus?.unfocus();
+
+               // Try to create Firebase account with same credentials so Firebase
+               // is in sync. If it fails (account already exists) we ignore and
+               // continue because backend registration already succeeded.
+               _safeFirebaseCreateUser(_emailController.text.trim(), _passwordController.text);
+
+               Navigator.pushReplacement(
+                 context,
+                 MaterialPageRoute(
+                   builder: (context) => const BottomNavigation(),
+                 ),
+               );
+             } else if (state is RegisterPageError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.errorMessage),
@@ -162,6 +186,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                   ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Lupa Password?', style: TextStyle(color: Color(0xFF2F80ED))),
+                    ),
+                  ),
                   const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
@@ -202,9 +243,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
-                      onPressed: () {
-                        // TODO: register google
-                      },
+
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: const BorderSide(
@@ -215,21 +254,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Masuk dengan Google',
-                            style: TextStyle(
-                              fontFamily: FontFamily.poppins,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: _titleColor,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Text(
+                                'Masuk dengan Google',
+                                style: TextStyle(
+                                  fontFamily: FontFamily.poppins,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: _titleColor,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
+                          onPressed: () async {
+                            try {
+                              await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.toString())),
+                              );
+                            }
+                          },
+                    )
                   ),
                   const SizedBox(height: 40),
                   Row(

@@ -65,16 +65,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _onSave() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Build body with current controller values
-    final body = {
-      'namaLengkap': _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'institusi': _institusiController.text.trim(),
-      'bio': _bioController.text.trim(),
-      'keahlian': _keahlianController.text.trim(),
-      'lokasi': _lokasiController.text.trim(),
-      'whatsapp': _whatsappController.text.trim(),
-    };
+    // Build body with only changed fields to avoid sending empty/unnecessary values
+    final body = <String, dynamic>{};
+    final p = widget.profile;
+    final nameVal = _nameController.text.trim();
+    if (nameVal != (p?.namaLengkap ?? '')) body['namaLengkap'] = nameVal;
+
+    final emailVal = _emailController.text.trim();
+    if (emailVal != (p?.email ?? '')) body['email'] = emailVal;
+
+    final institusiVal = _institusiController.text.trim();
+    if (institusiVal != (p?.institusi?.toString() ?? '')) body['institusi'] = institusiVal;
+
+    final bioVal = _bioController.text.trim();
+    if (bioVal != (p?.bio?.toString() ?? '')) body['bio'] = bioVal;
+
+    final keahlianVal = _keahlianController.text.trim();
+    if (keahlianVal != (p?.keahlian?.toString() ?? '')) body['keahlian'] = keahlianVal;
+
+    final lokasiVal = _lokasiController.text.trim();
+    if (lokasiVal != (p?.lokasi?.toString() ?? '')) body['lokasi'] = lokasiVal;
+
+    final whatsappVal = _whatsappController.text.trim();
+    if (whatsappVal != (p?.whatsapp?.toString() ?? '')) body['whatsapp'] = whatsappVal;
 
     // If user explicitly removed image, send empty string to backend
     if (_imageRemoved) {
@@ -103,7 +116,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         context.read<ProfileBloc>().add(LoadProfile());
       } catch (_) {}
 
-      Navigator.of(context).pop();
+      // Notify previous screen that update happened
+      Navigator.of(context).pop(true);
     } catch (e) {
       String msg = 'Terjadi kesalahan. Silakan coba lagi.';
       if (e is ApiException) msg = e.message;

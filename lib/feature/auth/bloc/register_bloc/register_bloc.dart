@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
@@ -24,6 +26,7 @@ class RegisterPageBloc extends Bloc<RegisterPageEvent, RegisterPageState> {
         if (e is ApiException) {
           emit(RegisterPageError(e.message));
         } else {
+          if (kDebugMode) print('Register BLoC unexpected error: $e');
           emit(RegisterPageError('Terjadi kesalahan. Silakan coba lagi.'));
         }
       }

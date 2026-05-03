@@ -11,6 +11,7 @@ import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -111,21 +112,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               children: [
                 // 2. Navigasi ke EditProfileScreen ditambahkan di sini
-                _menuItem(Icons.person_outline, 'Informasi pribadi', () {
+                _menuItem(Icons.person_outline, 'Informasi pribadi', () async {
                   // Pass current profile if loaded
                   final state = _profileBloc.state;
                   ProfileModel? p;
                   if (state is ProfileLoaded) p = state.profile;
-                  Navigator.push(
+
+                  final result = await Navigator.push<bool?>(
                     context,
                     MaterialPageRoute(
                       builder: (context) => EditProfileScreen(profile: p),
                     ),
                   );
+
+                  // If edit screen signalled an update, reload profile immediately
+                  if (result == true) {
+                    _profileBloc.add(LoadProfile());
+                  }
                 }),
                 const SizedBox(height: 2),
                 _menuItem(Icons.lock_open_rounded, 'Reset Password', () {
-                  debugPrint("Membuka Reset Password");
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                  );
                 }),
                 const SizedBox(height: 2),
                 _menuItem(Icons.logout, 'Keluar', () async {

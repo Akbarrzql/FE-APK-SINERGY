@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gabungyuk/feature/profile/model/profile_model.dart';
 
 class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({super.key});
+  final ProfileModel? profile;
+
+  const ProfileHeader({super.key, this.profile});
 
   @override
   Widget build(BuildContext context) {
@@ -14,17 +19,17 @@ class ProfileHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 35,
                 backgroundColor: Colors.blueAccent,
-                child: Icon(Icons.person, color: Colors.white, size: 40),
+                child: _buildProfileAvatar(profile?.profilePicture),
               ),
               const SizedBox(width: 15),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Magnus Carlsen',
+                    profile?.namaLengkap ?? '-',
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -33,7 +38,7 @@ class ProfileHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Android Developer',
+                    profile?.bio ?? '-',
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: Colors.grey.shade500,
@@ -45,7 +50,7 @@ class ProfileHeader extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Saya adalah seorang Mobile Developer dengan pengalaman luas dalam berkolaborasi bersama tim pengembang aplikasi mobile. Selama karier saya, saya telah bekerja erat dengan tim front-end, desainer, serta manajer produk untuk membangun dan mengintegrasikan API yang efisien dan skalabel ke dalam aplikasi mobile.',
+            profile?.bio ?? '-',
             style: GoogleFonts.poppins(
               fontSize: 12,
               height: 1.6,
@@ -75,6 +80,53 @@ class ProfileHeader extends StatelessWidget {
     );
   }
 
+  Widget _buildProfileAvatar(String? source) {
+    final value = source?.trim() ?? '';
+    if (value.isEmpty) {
+      return const Icon(Icons.person, color: Colors.white, size: 40);
+    }
+
+    if (value.startsWith('data:')) {
+      try {
+        final parts = value.split(',');
+        final b64 = parts.length > 1 ? parts[1] : '';
+        final bytes = base64Decode(b64);
+        return ClipOval(
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            width: 70,
+            height: 70,
+          ),
+        );
+      } catch (_) {}
+    }
+
+    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+      try {
+        final bytes = base64Decode(value);
+        return ClipOval(
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            width: 70,
+            height: 70,
+          ),
+        );
+      } catch (_) {}
+    }
+
+    return ClipOval(
+      child: Image.network(
+        value,
+        fit: BoxFit.cover,
+        width: 70,
+        height: 70,
+        errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 40),
+      ),
+    );
+  }
+
   // Fungsi helper untuk Ikon Sosmed dengan InkWell
   Widget _socialIcon(dynamic icon, Color color, VoidCallback onTap) {
     return Container(
@@ -84,15 +136,13 @@ class ProfileHeader extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Material(
-        color: Colors.transparent, // Menjaga background tetap transparan
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(
             10,
-          ), // Efek ripple mengikuti bentuk kotak
-          splashColor: Colors.blue.withOpacity(
-            0.1,
-          ), // Opsional: warna saat ditekan
+          ),
+            splashColor: Colors.blue.withValues(alpha: 0.1),
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: FaIcon(icon, color: color, size: 20),

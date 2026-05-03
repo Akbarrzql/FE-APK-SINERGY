@@ -144,12 +144,29 @@ class $AssetsImagePngGen {
 class $AssetsImageSvgGen {
   const $AssetsImageSvgGen();
 
+  /// File path: assets/image/svg/home_task.svg
+  SvgGenImage get homeTask =>
+      const SvgGenImage('assets/image/svg/home_task.svg');
+
   /// File path: assets/image/svg/logo_gabungyuk.svg
   SvgGenImage get logoGabungyuk =>
       const SvgGenImage('assets/image/svg/logo_gabungyuk.svg');
 
+  /// File path: assets/image/svg/profile_icon.svg
+  SvgGenImage get profileIcon =>
+      const SvgGenImage('assets/image/svg/profile_icon.svg');
+
+  /// File path: assets/image/svg/task_icon.svg
+  SvgGenImage get taskIcon =>
+      const SvgGenImage('assets/image/svg/task_icon.svg');
+
   /// List of all assets
-  List<SvgGenImage> get values => [logoGabungyuk];
+  List<SvgGenImage> get values => [
+    homeTask,
+    logoGabungyuk,
+    profileIcon,
+    taskIcon,
+  ];
 }
 
 class Assets {

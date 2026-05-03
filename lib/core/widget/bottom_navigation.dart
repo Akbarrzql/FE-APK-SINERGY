@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:flutter/services.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
+import 'package:gabungyuk/feature/home/home_screen.dart';
+import 'package:gabungyuk/feature/auth/login/login_screen.dart';
+import 'package:gabungyuk/feature/profile/presentation/screens/profile_screen.dart';
+
+import '../../feature/task/task_screen.dart';
+import '../gen/assets.gen.dart';
 
 class BottomNavigation extends StatefulWidget {
   final int currentIndex;
@@ -11,15 +19,16 @@ class BottomNavigation extends StatefulWidget {
   State<BottomNavigation> createState() => _BottomNavigationState();
 }
 
-class _BottomNavigationState extends State<BottomNavigation> {
+class _BottomNavigationState extends State<BottomNavigation>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   final List _pageStack = [];
+  final SharedCode _sharedCode = SharedCode();
 
   final _tabs = [
-    // const HomePage(),
-    // const TransactionPage(),
-    // const BudgetPage(),
-    // const ProfilePage(),
+    const HomeScreen(),
+    const TeskScreen(),
+    const ProfileScreen(),
   ];
 
   void _pagePush(int i) {
@@ -38,6 +47,23 @@ class _BottomNavigationState extends State<BottomNavigation> {
     });
   }
 
+  Future<void> _checkExpiredSession() async {
+    final isExpired = await _sharedCode.isAuthSessionExpired();
+    if (!mounted || !isExpired) {
+      return;
+    }
+
+    await _sharedCode.clearAuthSession();
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
   Future<bool> _pagePop(BuildContext context) {
     if (_pageStack.isEmpty) {
       return Future<bool>.value(true);
@@ -52,50 +78,77 @@ class _BottomNavigationState extends State<BottomNavigation> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _currentIndex = widget.currentIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkExpiredSession();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkExpiredSession();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return WillPopScope(
-      onWillPop: () => _pagePop(context),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) {
+          return;
+        }
+
+        final shouldExit = await _pagePop(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
       child: Scaffold(
         body: _tabs[_currentIndex],
         bottomNavigationBar: BottomNavigationBar(
           items: [
             BottomNavigationBarItem(
-              icon: SvgPicture.asset('assets/icons/home.svg'),
+              icon: SvgPicture.asset(Assets.image.svg.homeTask.path),
               activeIcon: SvgPicture.asset(
-                'assets/icons/home_active.svg',
-                color: ColorValue.secondaryColor,
+                Assets.image.svg.homeTask.path,
+                colorFilter: const ColorFilter.mode(
+                  ColorValue.primaryColor,
+                  BlendMode.srcIn,
+                ),
               ),
-              label: 'Beranda',
+              label: 'Kolaborasi',
             ),
             BottomNavigationBarItem(
-              icon: SvgPicture.asset('assets/icons/transaction.svg'),
+              icon: SvgPicture.asset(Assets.image.svg.taskIcon.path),
               activeIcon: SvgPicture.asset(
-                'assets/icons/transaction_active.svg',
-                color: ColorValue.secondaryColor,
+                Assets.image.svg.taskIcon.path,
+                colorFilter: const ColorFilter.mode(
+                  ColorValue.primaryColor,
+                  BlendMode.srcIn,
+                ),
               ),
-              label: 'Transaksi',
+              label: 'Tugas',
             ),
             BottomNavigationBarItem(
-              icon: SvgPicture.asset('assets/icons/budget.svg'),
+              icon: SvgPicture.asset(Assets.image.svg.profileIcon.path),
               activeIcon: SvgPicture.asset(
-                'assets/icons/budget_active.svg',
-                color: ColorValue.secondaryColor,
-              ),
-              label: 'Anggaran',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset('assets/icons/profile.svg'),
-              activeIcon: SvgPicture.asset(
-                'assets/icons/profile_active.svg',
-                color: ColorValue.secondaryColor,
+                Assets.image.svg.profileIcon.path,
+                colorFilter: const ColorFilter.mode(
+                  ColorValue.primaryColor,
+                  BlendMode.srcIn,
+                ),
               ),
               label: 'Profil',
             ),

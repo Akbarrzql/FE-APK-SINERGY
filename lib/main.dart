@@ -1,39 +1,73 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:gabungyuk/core/common/app_navigator.dart';
 import 'package:gabungyuk/feature/splash_screen/splash_screen.dart';
-import 'package:gabungyuk/feature/profile/presentation/screens/profile_screen.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/reset_password_in_app_screen.dart';
 
-void main() {
+import 'firebase_options.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await GoogleSignIn.instance.initialize();
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    _initDynamicLinks();
+  }
+
+  void _handleLink(Uri? link) {
+    if (link == null) return;
+    final code = link.queryParameters['oobCode'];
+    if (code != null && appNavigatorKey.currentState != null) {
+      appNavigatorKey.currentState!.push(
+        MaterialPageRoute(builder: (_) => ResetPasswordInAppScreen(oobCode: code)),
+      );
+    }
+  }
+
+  Future<void> _initDynamicLinks() async {
+    // Handle initial link
+    try {
+      final PendingDynamicLinkData? data = await FirebaseDynamicLinks.instance.getInitialLink();
+      _handleLink(data?.link);
+    } catch (e) {
+      // ignore
+    }
+
+    // Listen for subsequent links
+    FirebaseDynamicLinks.instance.onLink.listen((dynamicLinkData) {
+      _handleLink(dynamicLinkData.link);
+    }).onError((e) {
+      // ignore errors
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
         useMaterial3: false,
       ),
-      home: const ProfileScreen(),
+      home: const SplashScreen(),
     );
   }
 }

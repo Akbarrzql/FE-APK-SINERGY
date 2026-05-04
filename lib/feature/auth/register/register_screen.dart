@@ -36,6 +36,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePassword = true;
 
+  bool _isLoading(RegisterPageState state) => state is RegisterPageLoading;
+
   @override
   void initState() {
     super.initState();
@@ -102,18 +104,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
             }
           },
           builder: (context, state) {
-            if (state is RegisterPageLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return _buildInitialLayout(context);
+            return _buildInitialLayout(context, state);
           },
         ),
       ),
     );
   }
 
-  Widget _buildInitialLayout(BuildContext context) {
+  Widget _buildInitialLayout(BuildContext context, RegisterPageState state) {
+    final bool isLoading = _isLoading(state);
+
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
@@ -189,12 +189,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
-                        );
-                      },
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                              );
+                            },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
@@ -208,18 +210,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: () {
-                        FocusManager.instance.primaryFocus?.unfocus();
-                        if (_formKey.currentState!.validate()) {
-                          context.read<RegisterPageBloc>().add(
-                                RegisterButtonPressed(
-                                  name: _nameController.text.trim(),
-                                  email: _emailController.text.trim(),
-                                  password: _passwordController.text,
-                                ),
-                              );
-                        }
-                      },
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              if (_formKey.currentState!.validate()) {
+                                context.read<RegisterPageBloc>().add(
+                                      RegisterButtonPressed(
+                                        name: _nameController.text.trim(),
+                                        email: _emailController.text.trim(),
+                                        password: _passwordController.text,
+                                      ),
+                                    );
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _primaryBlue,
                         foregroundColor: Colors.white,
@@ -228,14 +232,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        'Daftar',
-                        style: TextStyle(
-                          fontFamily: FontFamily.poppins,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Daftar',
+                              style: TextStyle(
+                                fontFamily: FontFamily.poppins,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -254,29 +267,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Text(
-                                'Masuk dengan Google',
-                                style: TextStyle(
-                                  fontFamily: FontFamily.poppins,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: _titleColor,
-                                ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                valueColor: AlwaysStoppedAnimation<Color>(_titleColor),
                               ),
-                            ],
-                          ),
-                          onPressed: () async {
-                            try {
-                              await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString())),
-                              );
-                            }
-                          },
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Masuk dengan Google',
+                                  style: TextStyle(
+                                    fontFamily: FontFamily.poppins,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: _titleColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              try {
+                                await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
+                              }
+                            },
                     )
                   ),
                   const SizedBox(height: 40),
@@ -293,14 +317,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
-                            ),
-                          );
-                        },
+                        onTap: isLoading
+                            ? null
+                            : () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LoginScreen(),
+                                  ),
+                                );
+                              },
                         child: const Text(
                           'Masuk',
                           style: TextStyle(

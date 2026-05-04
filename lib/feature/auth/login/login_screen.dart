@@ -8,6 +8,7 @@ import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_state.dart';
 import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
+import '../../../core/widget/auth_text_field.dart';
 import '../service/firebase_integration_service.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/reset_password_for_google_user_screen.dart';
@@ -98,6 +99,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  bool _isLoading(LoginPageState state) => state is LoginPageLoading;
+
    void _goToRegister() {
      FocusManager.instance.primaryFocus?.unfocus();
      Navigator.push(
@@ -141,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
            content: Text(errorMessage),
            behavior: SnackBarBehavior.floating,
            backgroundColor: Colors.red.shade600,
-           duration: const Duration(seconds: 4),
+           duration: const Duration(seconds: 2),
            action: SnackBarAction(label: 'Tutup', onPressed: () {}),
          ),
        );
@@ -245,18 +248,16 @@ class _LoginScreenState extends State<LoginScreen> {
              }
           },
           builder: (context, state) {
-            if (state is LoginPageLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return _buildInitialLayout(context);
+            return _buildInitialLayout(context, state);
           },
         ),
       ),
     );
   }
 
-  Widget _buildInitialLayout(BuildContext context) {
+  Widget _buildInitialLayout(BuildContext context, LoginPageState state) {
+    final bool isLoading = _isLoading(state);
+
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
@@ -302,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 28),
 
-                  _AuthTextField(
+                  AuthTextField(
                     controller: _emailController,
                     hintText: 'Masukkan email',
                     keyboardType: TextInputType.emailAddress,
@@ -311,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 14),
 
-                  _AuthTextField(
+                  AuthTextField(
                     controller: _passwordController,
                     hintText: 'Masukkan password',
                     obscureText: _obscurePassword,
@@ -337,14 +338,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ForgotPasswordScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
@@ -368,7 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _onLogin,
+                      onPressed: isLoading ? null : _onLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _primaryBlue,
                         foregroundColor: Colors.white,
@@ -377,14 +380,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        'Masuk',
-                        style: TextStyle(
-                          fontFamily: FontFamily.poppins,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Masuk',
+                              style: TextStyle(
+                                fontFamily: FontFamily.poppins,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -405,29 +417,40 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Masuk dengan Google',
-                                style: TextStyle(
-                                  fontFamily: FontFamily.poppins,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: _titleColor,
-                                ),
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                valueColor: AlwaysStoppedAnimation<Color>(_titleColor),
                               ),
-                            ],
-                          ),
-                          onPressed: () async {
-                            try {
-                              await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString())),
-                              );
-                            }
-                          },
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Masuk dengan Google',
+                                  style: TextStyle(
+                                    fontFamily: FontFamily.poppins,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: _titleColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              try {
+                                await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
+                              }
+                            },
                     ),
                   ),
 
@@ -446,7 +469,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: _goToRegister,
+                        onTap: isLoading ? null : _goToRegister,
                         child: const Text(
                           'Daftar',
                           style: TextStyle(
@@ -471,91 +494,4 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _AuthTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final bool obscureText;
-  final Widget? suffixIcon;
-  final TextInputType keyboardType;
-  final String? Function(String?)? validator;
 
-  const _AuthTextField({
-    required this.controller,
-    required this.hintText,
-    this.obscureText = false,
-    this.suffixIcon,
-    this.keyboardType = TextInputType.text,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const Color borderColor = Color(0xFFD9DDE3);
-    const Color hintColor = Color(0xFFA7A7A7);
-    const Color textColor = Color(0xFF111111);
-
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: const TextStyle(
-        fontFamily: FontFamily.poppins,
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: textColor,
-      ),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(
-          fontFamily: FontFamily.poppins,
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: hintColor,
-        ),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.transparent,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: borderColor,
-            width: 1.2,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: borderColor,
-            width: 1.2,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color(0xFF2F80ED),
-            width: 1.4,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.2,
-          ),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-}

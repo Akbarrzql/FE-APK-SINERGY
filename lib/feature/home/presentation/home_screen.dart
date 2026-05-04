@@ -3,6 +3,7 @@ import 'package:gabungyuk/feature/home/presentation/widget/category_chip.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/collaboration_card.dart';
 
 import '../../../core/common/color_value.dart';
+import 'create_collaboration.dart';
 import 'detail_collaboration.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -121,13 +122,23 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         // Add button
-                        SizedBox(
-                          width: 38,
-                          height: 38,
-                          child: const Icon(
-                            Icons.add,
-                            color: ColorValue.textPrimary,
-                            size: 20,
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CreateCollaborationPage(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            child: const Icon(
+                              Icons.add,
+                              color: ColorValue.textPrimary,
+                              size: 20,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),

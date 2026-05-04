@@ -63,8 +63,8 @@ class RegisterRepositoryImpl implements RegisterRepository {
           message = json['message'].toString();
         } else if (json.containsKey('msg')) {
           message = json['msg'].toString();
-        } else if (json.containsKey('error')) {
-          message = json['error'].toString();
+        } else if (json.containsKey('details')) {
+          message = json['details'].toString();
         }
       } catch (_) {
         // ignore json parse errors

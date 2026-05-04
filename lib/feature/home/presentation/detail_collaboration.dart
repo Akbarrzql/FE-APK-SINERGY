@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
 
+import 'edit_collaboration.dart';
+
 // ─── Member Tile Widget ───────────────────────────────────────────────────────
 class MemberTile extends StatelessWidget {
   final String name;
@@ -127,6 +129,15 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     },
   ];
 
+  String _projectStatus = 'Belum Dimulai';
+
+  final List<String> _statusOptions = [
+    'Belum Dimulai',
+    'Sedang Berjalan',
+    'Selesai',
+    'Ditunda',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final shortDesc = _fullDescription.length > 100
@@ -138,7 +149,6 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // ── App Bar ────────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding:
@@ -172,10 +182,35 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.more_vert,
-                      color: ColorValue.textPrimary,
-                      size: 22,
+                    GestureDetector(
+                      child: Text(
+                        'Edit',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: ColorValue.primaryColor,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditCollaborationPage(
+                              initialData: CollaborationData(
+                                title: 'Moneyger Application Project',
+                                description:
+                                    'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah. Aplikasi ini juga menawarkan berbagai fitur yang dapat membantu masyarakat mempermudah produktivitas mereka.',
+                                category: 'Portofolio project',
+                                status: 'Sedang Berjalan',
+                                repositoryLink:
+                                    'https://github.com/example/moneyger',
+                                url: 'https://moneyger.app',
+                                imageUrl: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80'
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -274,6 +309,50 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                       ],
                     ),
 
+                    const SizedBox(height: 16),
+
+                    GestureDetector(
+                      onTap: () => _showStatusPicker(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _statusColor(_projectStatus).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(50),
+                          border: Border.all(
+                            color: _statusColor(_projectStatus).withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _statusColor(_projectStatus),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _projectStatus,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _statusColor(_projectStatus),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: _statusColor(_projectStatus),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 14),
 
                     // Description with "Baca Selengkapnya"
@@ -307,7 +386,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 28),
 
                     // Skill Tags
                     Wrap(
@@ -424,5 +503,89 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
         ),
       ),
     );
+  }
+
+  void _showStatusPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Pilih Status',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: ColorValue.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ..._statusOptions.map((s) {
+                  final isActive = s == _projectStatus;
+                  return ListTile(
+                    onTap: () {
+                      setState(() => _projectStatus = s);
+                      Navigator.pop(context);
+                    },
+                    leading: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _statusColor(s),
+                      ),
+                    ),
+                    title: Text(
+                      s,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                        color: isActive
+                            ? ColorValue.primaryColor
+                            : ColorValue.textPrimary,
+                      ),
+                    ),
+                    trailing: isActive
+                        ? const Icon(Icons.check,
+                        color: ColorValue.primaryColor, size: 18)
+                        : null,
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Sedang Berjalan':
+        return Colors.green;
+      case 'Selesai':
+        return Colors.blue;
+      case 'Ditunda':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 }

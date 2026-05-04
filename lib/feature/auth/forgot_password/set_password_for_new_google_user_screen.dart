@@ -1,9 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
+
+import '../../../core/common/shared_code.dart';
+import '../../../core/widget/auth_text_field.dart';
+import '../login/login_screen.dart';
 
 class SetPasswordForNewGoogleUserScreen extends StatefulWidget {
   final String email;
@@ -26,6 +31,8 @@ class _SetPasswordForNewGoogleUserScreenState
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+
+  final SharedCode _sharedCode = SharedCode();
 
   bool _isLoading = false;
   bool _showPassword = false;
@@ -65,13 +72,11 @@ class _SetPasswordForNewGoogleUserScreenState
         debugPrint('SET PASSWORD: Starting for ${widget.email}');
       }
 
-      // ✅ 1. Update Firebase Auth password (link email-password)
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception('User tidak terautentikasi');
       }
 
-      // Link email-password credential ke Firebase user yang sudah login via Google
       final credential = EmailAuthProvider.credential(
         email: widget.email,
         password: password,
@@ -83,8 +88,6 @@ class _SetPasswordForNewGoogleUserScreenState
         debugPrint('SET PASSWORD: Firebase Auth linked successfully');
       }
 
-       // ✅ 1b. Update backend profile secara eksplisit
-       // Backend akan menyimpan password baru sebagai source of truth untuk login manual.
        try {
          await _profileRepository.updateProfile({
            'password': password,
@@ -99,7 +102,6 @@ class _SetPasswordForNewGoogleUserScreenState
          rethrow;
        }
 
-        // ✅ 2. Update Firestore: mark has_local_password = true & save hashed + plaintext password
         final hashedPassword =
             FirebaseUserSyncHelper.instance.hashPassword(password);
         await FirebaseUserSyncHelper.instance.upsertUserDoc(
@@ -120,7 +122,6 @@ class _SetPasswordForNewGoogleUserScreenState
 
       if (!context.mounted) return;
 
-      // ✅ 3. Show success & navigate to dashboard
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password berhasil diatur! Selamat datang.'),
@@ -230,45 +231,48 @@ class _SetPasswordForNewGoogleUserScreenState
               const SizedBox(height: 24),
 
               // Password field
-              TextField(
+              AuthTextField(
                 controller: _passwordController,
+                hintText: 'Masukkan password Baru',
                 obscureText: !_showPassword,
-                decoration: InputDecoration(
-                  labelText: 'Password Baru',
-                  hintText: 'Minimal 6 karakter',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _showPassword ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () =>
-                        setState(() => _showPassword = !_showPassword),
-                  ),
+                validator: _sharedCode.passwordValidator,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showPassword = !_showPassword;
+                    });
+                  },
+                  icon: Icon(
+                    _showPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.grey
+                  )
                 ),
               ),
+
               const SizedBox(height: 16),
 
               // Confirm password field
-              TextField(
+              AuthTextField(
                 controller: _confirmPasswordController,
+                hintText: 'Konfirmasi password Baru',
                 obscureText: !_showConfirmPassword,
-                decoration: InputDecoration(
-                  labelText: 'Konfirmasi Password',
-                  hintText: 'Ulangi password',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _showConfirmPassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                    onPressed: () => setState(
-                        () => _showConfirmPassword = !_showConfirmPassword),
-                  ),
+                validator: (v) => v != _passwordController.text
+                    ? 'Password tidak cocok'
+                    : null,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showConfirmPassword = !_showConfirmPassword;
+                    });
+                  },
+                  icon: Icon(
+                    _showConfirmPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.grey
+                  )
                 ),
               ),
               const SizedBox(height: 24),
@@ -280,7 +284,7 @@ class _SetPasswordForNewGoogleUserScreenState
                   onPressed: _isLoading ? null : _setPassword,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue,
+                    backgroundColor: ColorValue.primaryColor,
                     disabledBackgroundColor: Colors.grey.shade300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

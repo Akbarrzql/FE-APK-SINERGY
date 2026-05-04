@@ -43,8 +43,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
           message = json['message'].toString();
         } else if (json.containsKey('msg')) {
           message = json['msg'].toString();
-        } else if (json.containsKey('error')) {
-          message = json['error'].toString();
+        } else if (json.containsKey('details')) {
+          message = json['details'].toString();
         }
       } catch (_) {
         // ignore
@@ -151,8 +151,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
        String message = 'Terjadi kesalahan. Silakan coba lagi.';
        try {
          final Map<String, dynamic> json = jsonDecode(response.body);
-         if (json.containsKey('message')) {
-           message = json['message'].toString();
+         if (json.containsKey('details')) {
+           message = json['details'].toString();
          } else if (json.containsKey('msg')) {
            message = json['msg'].toString();
          } else if (json.containsKey('error')) {

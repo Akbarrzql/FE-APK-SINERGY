@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../core/common/color_value.dart';
 
 class CategoryChip extends StatefulWidget {
@@ -27,17 +26,21 @@ class _CategoryChipState extends State<CategoryChip> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         decoration: BoxDecoration(
-          color: widget.isSelected ? ColorValue.primaryColor : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: widget.isSelected
+              ? ColorValue.primaryColor.withOpacity(0.12)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12), 
           border: Border.all(
-            color: ColorValue.primaryColor,
-            width: 1,
+            color: widget.isSelected
+                ? ColorValue.primaryColor.withOpacity(0.2)
+                : Colors.grey.shade300,
+            width: 1.5,
           ),
         ),
         child: Text(
           widget.label,
           style: TextStyle(
-            color: widget.isSelected ? Colors.white : ColorValue.primaryColor,
+            color: ColorValue.primaryColor,
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),

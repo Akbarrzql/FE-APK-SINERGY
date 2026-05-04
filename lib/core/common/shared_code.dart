@@ -84,15 +84,6 @@ class SharedCode {
     return DateTime.now().isAfter(expirationDate);
   }
 
-  String convertToIdr(dynamic number, int decimalDigit) {
-    NumberFormat currencyFormatter = NumberFormat.currency(
-      locale: 'id',
-      symbol: 'Rp. ',
-      decimalDigits: decimalDigit,
-    );
-    return currencyFormatter.format(number);
-  }
-
   // String get uid => FirebaseAuth.instance.currentUser!.uid;
 
   String get day => DateFormat('EEE').format(DateTime.now()).toLowerCase();

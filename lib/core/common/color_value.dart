@@ -4,7 +4,6 @@ class ColorValue {
   static const Color primaryColor = Color(0XFF277FFE);
   static const Color secondaryColor = Color(0XFF181818);
   static const Color greyColor = Color(0XFF797979);
-  static const Color borderColor = Color(0XFFE7E7E7);
   static const Color greyBorderColor = Color(0XFFECEEF2);
   static const Color greenColor = Color(0XFF95E7AF);
   static const Color redColor = Color(0XFFFF4545);
@@ -14,6 +13,16 @@ class ColorValue {
   static const Color orangeColor = Color(0XFFFF925C);
   static const Color purpleColor = Color(0XFF9747FF);
   static const Color blackColor = Color(0XFF000000);
+  static const Color cardColor = Colors.white;
+  static const Color textPrimary = Color(0xFF1A1A1A);
+  static const Color textSecondary = Color(0xFF888888);
+  static const Color chipBorder = Color(0xFF277FFE);
+  static const Color tagBackground = Color(0xFFEAF2FF);
+  static const Color tagText = Color(0xFF277FFE);
+  static const Color starColor = Color(0xFFFFC107);
+  static Color borderColor = Color(0xFFD9DDE3);
+  static Color hintColor = Color(0xFFA7A7A7);
+  static Color textColor = Color(0xFF111111);
 }
 
 class ColorValueDark {

@@ -25,26 +25,28 @@ class ProfileHeader extends StatelessWidget {
                 child: _buildProfileAvatar(profile?.profilePicture),
               ),
               const SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    profile?.namaLengkap ?? '-',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile?.namaLengkap ?? '-',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    profile?.bio ?? '-',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
+                    const SizedBox(height: 4),
+                    Text(
+                      profile?.keahlian ?? '-',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -130,6 +132,8 @@ class ProfileHeader extends StatelessWidget {
   // Fungsi helper untuk Ikon Sosmed dengan InkWell
   Widget _socialIcon(dynamic icon, Color color, VoidCallback onTap) {
     return Container(
+      width: 40,
+      height: 40,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade200),
@@ -143,10 +147,7 @@ class ProfileHeader extends StatelessWidget {
             10,
           ),
             splashColor: Colors.blue.withValues(alpha: 0.1),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: FaIcon(icon, color: color, size: 20),
-          ),
+          child: Center(child: FaIcon(icon, color: color, size: 20)),
         ),
       ),
     );

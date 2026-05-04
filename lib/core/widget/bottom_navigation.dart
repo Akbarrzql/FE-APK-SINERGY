@@ -3,7 +3,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
-import 'package:gabungyuk/feature/home/home_screen.dart';
+import 'package:gabungyuk/feature/home/presentation/home_screen.dart';
 import 'package:gabungyuk/feature/auth/login/login_screen.dart';
 import 'package:gabungyuk/feature/profile/presentation/screens/profile_screen.dart';
 

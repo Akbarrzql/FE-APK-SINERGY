@@ -14,6 +14,10 @@ abstract class LoginRepository {
     required String email,
     required String password,
   });
+
+  Future<LoginModel> loginGoogle({
+    required String idToken,
+  });
 }
 
 class LoginRepositoryImpl implements LoginRepository {
@@ -31,26 +35,52 @@ class LoginRepositoryImpl implements LoginRepository {
     );
   }
 
+  @override
+  Future<LoginModel> loginGoogle({required String idToken}) async {
+    return _postLogin(
+      url: Uri.parse('${ApiConfig.baseUrl}/api/v1/users/login/google'),
+      body: {'idToken': idToken},
+      logLabel: 'Login Google',
+    );
+  }
+
   Future<LoginModel> _loginWithBackend({
     required String email,
     required String password,
     required bool allowGoogleFallback,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/users/login');
+    return _postLogin(
+      url: Uri.parse('${ApiConfig.baseUrl}/api/v1/users/login'),
+      body: {
+        'email': email,
+        'password': password,
+      },
+      logLabel: 'Login',
+      allowGoogleFallback: allowGoogleFallback,
+      email: email,
+      password: password,
+    );
+  }
+
+  Future<LoginModel> _postLogin({
+    required Uri url,
+    required Map<String, dynamic> body,
+    required String logLabel,
+    bool allowGoogleFallback = false,
+    String? email,
+    String? password,
+  }) async {
     final response = await http.post(
       url,
       headers: {
         HttpHeaders.contentTypeHeader: 'application/json',
       },
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
+      body: jsonEncode(body),
     );
 
     if (kDebugMode) {
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
+      print('$logLabel response status: ${response.statusCode}');
+      print('$logLabel response body: ${response.body}');
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -81,7 +111,10 @@ class LoginRepositoryImpl implements LoginRepository {
       // ignore json parse errors
     }
 
-    if (allowGoogleFallback && _shouldTryGoogleFallback(response.statusCode, message)) {
+    if (allowGoogleFallback &&
+        email != null &&
+        password != null &&
+        _shouldTryGoogleFallback(response.statusCode, message)) {
       final googleSecret = await _resolveGoogleSecret(email);
       if (googleSecret != null && googleSecret.isNotEmpty && googleSecret != password) {
         if (kDebugMode) {

@@ -12,6 +12,8 @@ import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
+import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/reset_password_for_google_user_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -130,14 +132,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _profileBloc.add(LoadProfile());
                   }
                 }),
-                const SizedBox(height: 2),
-                _menuItem(Icons.lock_open_rounded, 'Reset Password', () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
-                  );
-                }),
-                const SizedBox(height: 2),
+                 const SizedBox(height: 2),
+                 _menuItem(Icons.lock_open_rounded, 'Reset Password', () async {
+                   // Smart routing: check if Google user or email user
+                   await _handleResetPasswordTap(context);
+                 }),
+                 const SizedBox(height: 2),
                 _menuItem(Icons.logout, 'Keluar', () async {
                   final confirm = await showDialog<bool>(
                     context: context,
@@ -257,5 +257,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  /// 🔑 Smart reset password routing
+  Future<void> _handleResetPasswordTap(BuildContext context) async {
+    try {
+      // Get current profile email from bloc
+      final state = _profileBloc.state;
+      String? email;
+      if (state is ProfileLoaded) {
+        email = state.profile.email;
+      }
+
+      if (email == null || email.isEmpty) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email tidak ditemukan')),
+        );
+        return;
+      }
+
+      // At this point email is guaranteed to be non-empty
+      final emailStr = email;
+
+      // Check if this is a Google user
+      final userData =
+          await FirebaseUserSyncHelper.instance.findUserByEmail(emailStr);
+
+      if (userData != null) {
+        final provider = userData['provider']?.toString() ?? '';
+        final hasLocalPassword =
+            userData['has_local_password'] as bool? ?? true;
+
+        if (!context.mounted) return;
+
+        // Google user without local password
+        if (provider == 'google' && !hasLocalPassword) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  ResetPasswordForGoogleUserScreen(email: emailStr),
+            ),
+          );
+          return;
+        }
+      }
+
+      // Regular email user or Google user with existing password
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      debugPrint('Error in _handleResetPasswordTap: $e');
+      // Fallback to regular reset
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+      );
+    }
   }
 }

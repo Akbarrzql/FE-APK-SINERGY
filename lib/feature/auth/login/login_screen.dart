@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import '../service/firebase_integration_service.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/reset_password_for_google_user_screen.dart';
 
 import '../../../../core/gen/assets.gen.dart';
 import '../../../../core/gen/fonts.gen.dart';
@@ -97,15 +98,120 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _goToRegister() {
-    FocusManager.instance.primaryFocus?.unfocus();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const RegisterScreen(),
-      ),
-    );
-  }
+   void _goToRegister() {
+     FocusManager.instance.primaryFocus?.unfocus();
+     Navigator.push(
+       context,
+       MaterialPageRoute(
+         builder: (context) => const RegisterScreen(),
+       ),
+     );
+   }
+
+   /// 🔍 Handle login error - check if Google-only user
+   Future<void> _handleLoginError(
+     BuildContext context,
+     String errorMessage,
+     String email,
+   ) async {
+     try {
+       // Cek di Firestore apakah user ini Google-only
+       final userData =
+           await FirebaseUserSyncHelper.instance.findUserByEmail(email);
+
+       if (userData != null) {
+         final provider = userData['provider']?.toString() ?? '';
+         final hasLocalPassword =
+             userData['has_local_password'] as bool? ?? true;
+         final googleUid = userData['google_uid']?.toString() ?? '';
+
+         // ✅ Google-only user trying manual login
+         if (provider == 'google' && !hasLocalPassword && googleUid.isNotEmpty) {
+           if (!context.mounted) return;
+
+           _showGoogleUserOptions(context, email);
+           return;
+         }
+       }
+
+       // ❌ Regular error - show snack bar
+       if (!context.mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(
+           content: Text(errorMessage),
+           behavior: SnackBarBehavior.floating,
+           backgroundColor: Colors.red.shade600,
+           duration: const Duration(seconds: 4),
+           action: SnackBarAction(label: 'Tutup', onPressed: () {}),
+         ),
+       );
+     } catch (e) {
+       if (kDebugMode) {
+         debugPrint('_handleLoginError: $e');
+       }
+       // Show original error
+       if (!context.mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(
+           content: Text(errorMessage),
+           behavior: SnackBarBehavior.floating,
+           backgroundColor: Colors.red.shade600,
+           duration: const Duration(seconds: 4),
+           action: SnackBarAction(label: 'Tutup', onPressed: () {}),
+         ),
+       );
+     }
+   }
+
+   /// 💡 Dialog untuk Google-only users
+   void _showGoogleUserOptions(BuildContext context, String email) {
+     showDialog(
+       context: context,
+       builder: (context) => AlertDialog(
+         title: const Text('Akun Google Terdeteksi'),
+         content: const Text(
+           'Akun Anda terdaftar via Google. Untuk login dengan email dan password manual, silakan reset password terlebih dahulu.',
+         ),
+         actions: [
+           TextButton(
+             onPressed: () => Navigator.pop(context),
+             child: const Text('Batal'),
+           ),
+           ElevatedButton(
+             onPressed: () {
+               Navigator.pop(context);
+               _goToResetPassword(context, email);
+             },
+             child: const Text('Reset Password'),
+           ),
+           ElevatedButton(
+             style: ElevatedButton.styleFrom(
+               backgroundColor: Colors.grey,
+             ),
+             onPressed: () {
+               Navigator.pop(context);
+               ScaffoldMessenger.of(context).showSnackBar(
+                 const SnackBar(
+                   content: Text('Silakan gunakan tombol "Masuk dengan Google"'),
+                 ),
+               );
+             },
+             child: const Text('Masuk dengan Google'),
+           ),
+         ],
+       ),
+     );
+   }
+
+   void _goToResetPassword(BuildContext context, String email) {
+     Navigator.push(
+       context,
+       MaterialPageRoute(
+         builder: (context) =>
+             ResetPasswordForGoogleUserScreen(email: email),
+       ),
+     );
+   }
 
   @override
   Widget build(BuildContext context) {
@@ -129,17 +235,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   builder: (context) => const BottomNavigation(),
                 ),
               );
-            } else if (state is LoginPageError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: Colors.red.shade600,
-                  duration: const Duration(seconds: 4),
-                  action: SnackBarAction(label: 'Tutup', onPressed: () {}),
-                ),
-              );
-            }
+             } else if (state is LoginPageError) {
+               // 🔍 Check if it's a Google-only user trying manual login
+               _handleLoginError(
+                 context,
+                 state.errorMessage,
+                 _emailController.text.trim(),
+               );
+             }
           },
           builder: (context, state) {
             if (state is LoginPageLoading) {

@@ -55,15 +55,18 @@ class AccountLinkingService {
 
   /// 🔗 Link Google account to existing backend account
   ///
-  /// When user Google-logins with email that already exists in backend:
-  /// 1. Verify they own the existing account (optional - trust Google provider)
-  /// 2. Update Firestore to mark as multi-provider
-  /// 3. Update backend if needed
+  /// Flow:
+  /// 1. Jika user sudah set password local (has_local_password=true), backend sudah punya akun
+  ///    - Skip login attempt untuk menghindari password mismatch
+  ///    - Just update Firestore
+  /// 2. Jika belum set password, coba login/register dengan googleSecret
+  ///
+  /// Ini menghindari error 401 ketika password sudah diganti user tapi system coba
+  /// login dengan googleSecret yang sudah tidak valid lagi.
   Future<void> linkGoogleToExisting({
     required String email,
     required String googleUid,
     required String fullName,
-    required String googleIdToken,
   }) async {
     try {
       if (kDebugMode) {
@@ -77,32 +80,106 @@ class AccountLinkingService {
         throw ApiException('Akun tidak ditemukan untuk di-link', 404);
       }
 
-      final backendLogin = await _loginRepo.loginGoogle(idToken: googleIdToken);
-      if (kDebugMode) {
-        debugPrint('ACCOUNT LINKING: backend Google login success for $email');
-        debugPrint('ACCOUNT LINKING: backend Google login response token=${backendLogin.data.token}');
-      }
+       // Get existing provider info
+       final existingProvider =
+           existingAccount['provider']?.toString() ?? 'email_password';
+       final existingUid = existingAccount['uid']?.toString() ?? '';
+       final hasLocalPassword =
+           existingAccount['has_local_password'] as bool? ?? false;
+       final localPasswordHash =
+           existingAccount['local_password']?.toString() ?? '';
+       final plainPassword = existingAccount['plain_password']?.toString() ?? '';
 
-      // Get existing provider info
-      final existingProvider =
-          existingAccount['provider']?.toString() ?? 'email_password';
-      final existingUid = existingAccount['uid']?.toString() ?? '';
+       if (kDebugMode) {
+         debugPrint(
+             'ACCOUNT LINKING: existing provider=$existingProvider, uid=$existingUid, hasLocalPassword=$hasLocalPassword');
+       }
 
-      if (kDebugMode) {
-        debugPrint(
-            'ACCOUNT LINKING: existing provider=$existingProvider, uid=$existingUid');
-      }
+       // 🔑 Key decision: Apakah sudah ada local password?
+       if (hasLocalPassword) {
+         // User sudah set password lokal - backend password sudah diganti
+         // Gunakan plaintext password dari Firestore untuk backend login
+         if (plainPassword.isNotEmpty) {
+           if (kDebugMode) {
+             debugPrint(
+                 'ACCOUNT LINKING: user has local password, attempting backend login with stored password');
+           }
 
-      // ✅ Update Firestore to mark as multi-provider
-      await FirebaseUserSyncHelper.instance.upsertUserDoc(
-        uid: existingUid,
-        email: email,
-        fullName: fullName,
-        provider: 'multi', // ← Multi-provider account
-        googleUid: googleUid,
-        hasLocalPassword:
-            existingAccount['has_local_password'] as bool? ?? true,
-      );
+           try {
+             final backendLogin = await _loginRepo.loginUser(
+               email: email,
+               password: plainPassword,
+             );
+             if (kDebugMode) {
+               debugPrint('ACCOUNT LINKING: backend login success with stored password');
+               debugPrint(
+                   'ACCOUNT LINKING: backend token=${backendLogin.data.token}');
+             }
+           } on ApiException catch (e) {
+             if (kDebugMode) {
+               debugPrint(
+                   'ACCOUNT LINKING: backend login failed with stored password (status=${e.statusCode}): $e');
+             }
+             // If login fails, just skip - account already exists
+             // This is safer than trying to register
+           }
+         } else {
+           // Plaintext password not found in Firestore, just skip
+           if (kDebugMode) {
+             debugPrint(
+                 'ACCOUNT LINKING: user has local password but plaintext not in Firestore, skipping backend login');
+           }
+         }
+       } else {
+         // Belum ada local password, coba login/register dengan googleSecret
+         final googleSecret =
+             FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
+
+         if (kDebugMode) {
+           debugPrint(
+               'ACCOUNT LINKING: attempting backend login with googleSecret');
+         }
+
+         // Coba login ke backend manual dulu. Jika akun belum ada, register.
+         try {
+           final backendLogin = await _loginRepo.loginUser(
+             email: email,
+             password: googleSecret,
+           );
+           if (kDebugMode) {
+             debugPrint('ACCOUNT LINKING: backend manual login success for $email');
+             debugPrint(
+                 'ACCOUNT LINKING: backend token=${backendLogin.data.token}');
+           }
+         } on ApiException catch (e) {
+           if (e.statusCode == 401 || e.statusCode == 404) {
+             if (kDebugMode) {
+               debugPrint(
+                   'ACCOUNT LINKING: backend account not found (status=${e.statusCode}), registering via manual endpoint');
+             }
+             await _registerRepo.registerUser(
+               name: fullName,
+               email: email,
+               password: googleSecret,
+             );
+           } else {
+             rethrow;
+           }
+         }
+       }
+
+       // ✅ Update Firestore to mark as multi-provider (if has local password)
+       // or keep existing provider
+       await FirebaseUserSyncHelper.instance.upsertUserDoc(
+         uid: existingUid,
+         email: email,
+         fullName: fullName,
+         provider: hasLocalPassword ? 'multi' : existingProvider,
+         googleUid: googleUid,
+         hasLocalPassword: hasLocalPassword,
+         localPassword: localPasswordHash.isNotEmpty ? localPasswordHash : null,
+         plainPassword: plainPassword.isNotEmpty ? plainPassword : null,
+       );
 
       if (kDebugMode) {
         debugPrint('ACCOUNT LINKING: successfully linked Google to $email');
@@ -122,14 +199,19 @@ class AccountLinkingService {
     required String email,
     required String googleUid,
     required String fullName,
-    required String googleIdToken,
   }) async {
     try {
       if (kDebugMode) {
         debugPrint(
             'ACCOUNT LINKING: registering new Google account $email (google_uid=$googleUid)');
       }
-      await _registerRepo.registerGoogle(idToken: googleIdToken);
+      final googleSecret = FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
+
+      await _registerRepo.registerUser(
+        name: fullName,
+        email: email,
+        password: googleSecret,
+      );
 
       if (kDebugMode) {
         debugPrint('ACCOUNT LINKING: backend Google registration successful for $email');
@@ -149,7 +231,6 @@ class AccountLinkingService {
     required String email,
     required String googleUid,
     required String fullName,
-    required String googleIdToken,
   }) async {
     try {
       if (kDebugMode) {
@@ -169,7 +250,6 @@ class AccountLinkingService {
           email: email,
           googleUid: googleUid,
           fullName: fullName,
-          googleIdToken: googleIdToken,
         );
 
         // Return updated account info
@@ -188,7 +268,6 @@ class AccountLinkingService {
         email: email,
         googleUid: googleUid,
         fullName: fullName,
-        googleIdToken: googleIdToken,
       );
 
       // Return newly created account info

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
+import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
 class SetPasswordForNewGoogleUserScreen extends StatefulWidget {
   final String email;
@@ -21,6 +22,7 @@ class SetPasswordForNewGoogleUserScreen extends StatefulWidget {
 
 class _SetPasswordForNewGoogleUserScreenState
     extends State<SetPasswordForNewGoogleUserScreen> {
+  final ProfileRepositoryImpl _profileRepository = ProfileRepositoryImpl();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -81,15 +83,36 @@ class _SetPasswordForNewGoogleUserScreenState
         debugPrint('SET PASSWORD: Firebase Auth linked successfully');
       }
 
-      // ✅ 2. Update Firestore: mark has_local_password = true
-      await FirebaseUserSyncHelper.instance.upsertUserDoc(
-        uid: currentUser.uid,
-        email: widget.email,
-        fullName: currentUser.displayName ?? '',
-        provider: 'google', // atau 'multi' untuk multi-provider
-        googleUid: widget.googleUid,
-        hasLocalPassword: true, // Sekarang sudah ada password
-      );
+       // ✅ 1b. Update backend profile secara eksplisit
+       // Backend akan menyimpan password baru sebagai source of truth untuk login manual.
+       try {
+         await _profileRepository.updateProfile({
+           'password': password,
+         });
+         if (kDebugMode) {
+           debugPrint('SET PASSWORD: backend profile updated successfully');
+         }
+       } catch (e) {
+         if (kDebugMode) {
+           debugPrint('SET PASSWORD: backend profile update failed: $e');
+         }
+         rethrow;
+       }
+
+        // ✅ 2. Update Firestore: mark has_local_password = true & save hashed + plaintext password
+        final hashedPassword =
+            FirebaseUserSyncHelper.instance.hashPassword(password);
+        await FirebaseUserSyncHelper.instance.upsertUserDoc(
+          uid: currentUser.uid,
+          email: widget.email,
+          fullName: currentUser.displayName ?? '',
+          provider: 'multi',
+          googleUid: widget.googleUid,
+          hasLocalPassword: true, // Sekarang sudah ada password
+          passwordJustSet: true,
+          localPassword: hashedPassword,
+          plainPassword: password, // 🔑 SAVE plaintext for backend login later
+        );
 
       if (kDebugMode) {
         debugPrint('SET PASSWORD: Firestore updated successfully');

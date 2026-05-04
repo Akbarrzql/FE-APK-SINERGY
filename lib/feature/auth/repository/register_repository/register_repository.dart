@@ -51,6 +51,7 @@ class RegisterRepositoryImpl implements RegisterRepository {
         name: name,
         email: email,
         provider: 'email_password',
+        password: password,  // ← NEW: Save plaintext password
       );
 
       return registerModel;
@@ -150,10 +151,15 @@ class RegisterRepositoryImpl implements RegisterRepository {
     required String name,
     required String email,
     required String provider,
+    String? password,
   }) async {
     try {
       final existing = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
       final uid = existing == null ? email : (existing['uid']?.toString().isNotEmpty == true ? existing['uid'].toString() : email);
+
+      final hashedPassword = password != null
+          ? FirebaseUserSyncHelper.instance.hashPassword(password)
+          : null;
 
       await FirebaseUserSyncHelper.instance.upsertUserDoc(
         uid: uid,
@@ -161,6 +167,8 @@ class RegisterRepositoryImpl implements RegisterRepository {
         fullName: name,
         provider: provider,
         hasLocalPassword: true,
+        localPassword: hashedPassword,
+        plainPassword: password,  // ← NEW: Save plaintext password
       );
     } catch (e) {
       if (kDebugMode) {

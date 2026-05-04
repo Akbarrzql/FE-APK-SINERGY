@@ -152,6 +152,16 @@ class LoginRepositoryImpl implements LoginRepository {
 
       final provider = userData['provider']?.toString() ?? '';
       final googleUid = userData['google_uid']?.toString() ?? '';
+      final hasLocalPassword = userData['has_local_password'] as bool? ?? false;
+
+      // 🔑 Priority:
+      // 1. Jika sudah ada local password, gunakan googleSecret (untuk fallback ke Google login)
+      // 2. Jika pure Google provider, gunakan derived secret
+      if (hasLocalPassword && googleUid.isNotEmpty) {
+        // User sudah set password lokal pada Google account
+        // Return googleSecret sebagai fallback untuk Google re-login
+        return FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
+      }
 
       if (provider == 'google' && googleUid.isNotEmpty) {
         return FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);

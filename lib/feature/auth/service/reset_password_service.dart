@@ -91,21 +91,25 @@ class ResetPasswordService {
         // Bisa diabaikan, main purpose sudah tercapai
       }
 
-      // ✅ Step 5: Update Firestore: set has_local_password = true
-      if (kDebugMode) {
-        debugPrint('RESET PASSWORD: updating Firestore has_local_password flag');
-      }
-      final userData = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
-      if (userData != null) {
-        await FirebaseUserSyncHelper.instance.upsertUserDoc(
-          uid: userData['uid']?.toString() ?? '',
-          email: email,
-          fullName: userData['full_name']?.toString() ?? '',
-          provider: userData['provider']?.toString() ?? 'email_password',
-          googleUid: userData['google_uid']?.toString(),
-          hasLocalPassword: true, // ✅ Mark bahwa user sekarang punya local password
-        );
-      }
+       // ✅ Step 5: Update Firestore: set has_local_password = true
+       if (kDebugMode) {
+         debugPrint('RESET PASSWORD: updating Firestore has_local_password flag');
+       }
+       final userData = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
+       if (userData != null) {
+         final hashedPassword = FirebaseUserSyncHelper.instance.hashPassword(newPassword);
+         await FirebaseUserSyncHelper.instance.upsertUserDoc(
+           uid: userData['uid']?.toString() ?? '',
+           email: email,
+           fullName: userData['full_name']?.toString() ?? '',
+           provider: 'multi',
+           googleUid: userData['google_uid']?.toString(),
+           hasLocalPassword: true, // ✅ Mark bahwa user sekarang punya local password
+           passwordJustSet: true,
+           localPassword: hashedPassword,
+           plainPassword: newPassword, // 🔑 SAVE plaintext for backend login
+         );
+       }
 
       if (kDebugMode) {
         debugPrint('RESET PASSWORD: SUCCESS for $email');

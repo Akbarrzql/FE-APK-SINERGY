@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/profile/model/profile_model.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
@@ -102,14 +103,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       final res = await _repo.updateProfile(body, profileImageFile: imageFileToUpload);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res.message),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green.shade600,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      AuthUiHelper.showSuccess(context, res.message);
 
       // trigger reload of profile
       try {
@@ -121,14 +115,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } catch (e) {
       String msg = 'Terjadi kesalahan. Silakan coba lagi.';
       if (e is ApiException) msg = e.message;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade600,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      AuthUiHelper.showError(context, msg);
     }
   }
 
@@ -317,44 +304,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showImageSourceActionSheet() {
-    showModalBottomSheet(
+    AuthUiHelper.showAppBottomSheet(
       context: context,
-      builder: (_) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Pilih dari Galeri'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImageFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Ambil Foto'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImageFromCamera();
-                },
-              ),
-              if (_pickedImageFile != null || widget.profile?.profilePicture != null)
-                ListTile(
-                  leading: const Icon(Icons.delete, color: Colors.red),
-                  title: const Text('Hapus Foto', style: TextStyle(color: Colors.red)),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    setState(() {
-                      _pickedImageFile = null;
-                      _imageRemoved = true;
-                    });
-                  },
-                ),
-            ],
+      title: 'Pilih Foto Profil',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Pilih dari Galeri'),
+            onTap: () {
+              Navigator.of(context).pop();
+              _pickImageFromGallery();
+            },
           ),
-        );
-      },
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Ambil Foto'),
+            onTap: () {
+              Navigator.of(context).pop();
+              _pickImageFromCamera();
+            },
+          ),
+          if (_pickedImageFile != null || widget.profile?.profilePicture != null)
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Hapus Foto', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _pickedImageFile = null;
+                  _imageRemoved = true;
+                });
+              },
+            ),
+        ],
+      ),
     );
   }
 
@@ -369,8 +354,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _imageRemoved = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memilih gambar: $e')),
+      AuthUiHelper.showError(
+        context,
+        AuthUiHelper.readableError(
+          e,
+          fallback: 'Gagal memilih gambar. Silakan coba lagi.',
+        ),
       );
     }
   }
@@ -397,52 +386,62 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _imageRemoved = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengambil gambar: $e')),
+      AuthUiHelper.showError(
+        context,
+        AuthUiHelper.readableError(
+          e,
+          fallback: 'Gagal mengambil gambar. Silakan coba lagi.',
+        ),
       );
     }
   }
 
   void _showPermissionDeniedDialog(String permissionName, String message) {
-    showDialog(
+    AuthUiHelper.showAppDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text('Izin Diperlukan'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Tutup'),
-            ),
-          ],
-        );
-      },
+      title: 'Izin Diperlukan',
+      content: Text(
+        message,
+        style: const TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: Color(0xFF555555),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
     );
   }
 
   void _showPermissionPermanentlyDeniedDialog(String permissionName) {
-    showDialog(
+    AuthUiHelper.showAppDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text('Izin Ditolak Secara Permanen'),
-          content: Text('Izin akses $permissionName ditolak secara permanen. Silakan buka Pengaturan untuk mengubahnya.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Tutup'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                perm_helper.PermissionHandlerHelper.openAppSettings();
-              },
-              child: const Text('Buka Pengaturan'),
-            ),
-          ],
-        );
-      },
+      title: 'Izin Ditolak Secara Permanen',
+      content: Text(
+        'Izin akses $permissionName ditolak secara permanen. Silakan buka Pengaturan untuk mengubahnya.',
+        style: const TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: Color(0xFF555555),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            perm_helper.PermissionHandlerHelper.openAppSettings();
+          },
+          child: const Text('Buka Pengaturan'),
+        ),
+      ],
     );
   }
 

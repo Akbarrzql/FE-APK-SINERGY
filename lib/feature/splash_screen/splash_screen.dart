@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/common/deep_link_service.dart';
 import '../../core/common/shared_code.dart';
 import '../../../../core/gen/assets.gen.dart';
 import '../../core/widget/bottom_navigation.dart';
@@ -17,8 +18,13 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final SharedCode _sharedCode = SharedCode();
+  Timer? _splashTimer;
 
   Future<void> _routeAfterSplash() async {
+    if (DeepLinkService.instance.bypassSplash) {
+      return;
+    }
+
     final token = await _sharedCode.getAuthToken();
     if (!mounted) return;
 
@@ -55,9 +61,9 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  Future _startSplashScreen() async {
-    var duration = const Duration(seconds: 3);
-    return Timer(duration, () {
+  void _startSplashScreen() {
+    const duration = Duration(seconds: 3);
+    _splashTimer = Timer(duration, () {
       _routeAfterSplash();
     });
   }
@@ -67,6 +73,12 @@ class _SplashScreenState extends State<SplashScreen> {
     // TODO: implement initState
     super.initState();
     _startSplashScreen();
+  }
+
+  @override
+  void dispose() {
+    _splashTimer?.cancel();
+    super.dispose();
   }
 
   @override

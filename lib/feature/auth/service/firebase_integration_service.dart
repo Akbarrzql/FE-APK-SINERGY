@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/set_password_for_new_google_user_screen.dart';
@@ -117,10 +118,11 @@ class FirebaseIntegrationService {
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login gagal: $e'),
-          backgroundColor: Colors.red,
+      AuthUiHelper.showError(
+        context,
+        AuthUiHelper.readableError(
+          e,
+          fallback: 'Gagal masuk dengan Google. Silakan coba lagi.',
         ),
       );
     }

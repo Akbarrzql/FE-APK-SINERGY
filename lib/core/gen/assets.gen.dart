@@ -131,6 +131,10 @@ class $AssetsImagePngGen {
   AssetGenImage get rekomendasiOnboarding =>
       const AssetGenImage('assets/image/png/rekomendasi_onboarding.png');
 
+  /// File path: assets/image/png/reset_password_ilustration.png
+  AssetGenImage get resetPasswordIlustration =>
+      const AssetGenImage('assets/image/png/reset_password_ilustration.png');
+
   /// List of all assets
   List<AssetGenImage> get values => [
     gabungyukLogo,
@@ -138,6 +142,7 @@ class $AssetsImagePngGen {
     mentorOnboarding,
     portraitFashionModelGirlStudio130864352,
     rekomendasiOnboarding,
+    resetPasswordIlustration,
   ];
 }
 

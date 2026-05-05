@@ -13,6 +13,97 @@ class ResetPasswordService {
   final _loginRepo = LoginRepositoryImpl();
   final _profileRepo = ProfileRepositoryImpl();
 
+  /// Change password flow untuk user login biasa (dari halaman profile).
+  ///
+  /// Validasi password lama dilakukan dengan:
+  /// 1) login backend (primary source of truth)
+  /// 2) fallback Firestore (plain_password / local_password hash)
+  Future<void> changePasswordForCurrentUser({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final profile = await _profileRepo.getProfile();
+      final email = profile.email.trim();
+
+      if (email.isEmpty) {
+        throw ApiException('Email pengguna tidak ditemukan.', 400);
+      }
+
+      bool oldPasswordValid = false;
+
+      // 1) Cek old password via login backend
+      try {
+        await _loginRepo.loginUser(email: email, password: oldPassword);
+        oldPasswordValid = true;
+      } catch (_) {
+        oldPasswordValid = false;
+      }
+
+      // 2) Fallback cek dari Firestore jika login backend gagal
+      if (!oldPasswordValid) {
+        final userData = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
+        if (userData != null) {
+          final plain = userData['plain_password']?.toString() ?? '';
+          final localHash = userData['local_password']?.toString() ?? '';
+
+          if (plain.isNotEmpty && plain == oldPassword) {
+            oldPasswordValid = true;
+          } else if (localHash.isNotEmpty &&
+              FirebaseUserSyncHelper.instance.verifyPassword(oldPassword, localHash)) {
+            oldPasswordValid = true;
+          }
+        }
+      }
+
+      if (!oldPasswordValid) {
+        throw ApiException('Password lama tidak sesuai. Silakan coba lagi.', 401);
+      }
+
+      // Update password di backend (endpoint profile update)
+      await _profileRepo.updateProfile({'password': newPassword});
+
+      // Best effort update Firebase Auth (jika akun email/password)
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && currentUser.email != null) {
+        try {
+          await currentUser.reauthenticateWithCredential(
+            EmailAuthProvider.credential(
+              email: currentUser.email!,
+              password: oldPassword,
+            ),
+          );
+          await currentUser.updatePassword(newPassword);
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('CHANGE PASSWORD: skip Firebase update: $e');
+          }
+        }
+      }
+
+      // Sinkron metadata password ke Firestore agar konsisten fallback di device lain
+      final userData = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
+      if (userData != null) {
+        await FirebaseUserSyncHelper.instance.upsertUserDoc(
+          uid: userData['uid']?.toString() ?? '',
+          email: email,
+          fullName: userData['full_name']?.toString() ?? '',
+          provider: userData['provider']?.toString() ?? 'multi',
+          googleUid: userData['google_uid']?.toString(),
+          hasLocalPassword: true,
+          passwordJustSet: true,
+          localPassword: FirebaseUserSyncHelper.instance.hashPassword(newPassword),
+          plainPassword: newPassword,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('CHANGE PASSWORD ERROR: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// 🔄 Flow Reset Password untuk Google Users:
   /// 1. Verifikasi old password (login ke backend)
   /// 2. Update password di backend

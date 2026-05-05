@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/auth/service/reset_password_service.dart';
+import '../../../core/gen/assets.gen.dart';
 
 class ResetPasswordForGoogleUserScreen extends StatefulWidget {
   final String email;
@@ -18,6 +21,7 @@ class ResetPasswordForGoogleUserScreen extends StatefulWidget {
 
 class _ResetPasswordForGoogleUserScreenState
     extends State<ResetPasswordForGoogleUserScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _oldPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -26,6 +30,8 @@ class _ResetPasswordForGoogleUserScreenState
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
   bool _loading = false;
+
+  final SharedCode _sharedCode = SharedCode();
 
   @override
   void dispose() {
@@ -36,42 +42,23 @@ class _ResetPasswordForGoogleUserScreenState
   }
 
   Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
     final oldPwd = _oldPasswordController.text.trim();
     final newPwd = _newPasswordController.text.trim();
-    final confirm = _confirmPasswordController.text.trim();
-
-    // ✅ Validation
-    if (oldPwd.isEmpty) {
-      _showSnackBar('Masukkan password lama', Colors.orange);
-      return;
-    }
-
-    if (newPwd.isEmpty) {
-      _showSnackBar('Masukkan password baru', Colors.orange);
-      return;
-    }
-
-    if (newPwd.length < 6) {
-      _showSnackBar('Password minimal 6 karakter', Colors.orange);
-      return;
-    }
-
-    if (newPwd != confirm) {
-      _showSnackBar('Password baru tidak cocok', Colors.red);
-      return;
-    }
 
     if (newPwd == oldPwd) {
-      _showSnackBar('Password baru tidak boleh sama dengan yang lama',
-          Colors.orange);
+      _showSnackBar(
+        'Kata sandi baru tidak boleh sama dengan yang lama.',
+        Colors.orange,
+      );
       return;
     }
 
     setState(() => _loading = true);
     try {
       if (kDebugMode) {
-        debugPrint(
-            'RESET PASSWORD SCREEN: submitting for ${widget.email}');
+        debugPrint('RESET PASSWORD SCREEN: submitting for ${widget.email}');
       }
 
       await ResetPasswordService.instance.resetPasswordForGoogleUser(
@@ -83,277 +70,222 @@ class _ResetPasswordForGoogleUserScreenState
       if (!mounted) return;
 
       _showSnackBar(
-        'Password berhasil diubah! Anda sekarang bisa login dengan email dan password baru.',
+        'Kata sandi berhasil diubah! Anda sekarang bisa masuk dengan email dan kata sandi baru.',
         Colors.green,
       );
 
-      // Tunggu 2 detik, lalu kembali ke login
       await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        Navigator.of(context).pop(true); // Indicate success
-      }
+      if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (kDebugMode) {
         debugPrint('RESET PASSWORD SCREEN ERROR: ${e.message}');
       }
-      _showSnackBar(e.message, Colors.red);
+      _showSnackBar(AuthUiHelper.toIndonesianMessage(e.message), Colors.red);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('RESET PASSWORD SCREEN ERROR: $e');
       }
-      _showSnackBar('Gagal mengubah password: $e', Colors.red);
+      _showSnackBar(
+        AuthUiHelper.readableError(
+          e,
+          fallback: 'Gagal mengubah kata sandi. Silakan coba lagi.',
+        ),
+        Colors.red,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   void _showSnackBar(String message, Color backgroundColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: backgroundColor,
-        duration: const Duration(seconds: 3),
-      ),
+    AuthUiHelper.showSnackBar(
+      context,
+      message,
+      backgroundColor: backgroundColor,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reset Password'),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-      ),
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // 🖼️ Illustration
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.lock_outline,
-                    size: 80,
-                    color: Colors.blue.shade300,
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Title
-                const Text(
-                  'Reset Password',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111111),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Subtitle
-                Text(
-                  'Masukkan password lama dan password baru untuk mengubah akses masuk Anda',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.grey.shade600,
-                    height: 1.5,
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // ❌ Important info for Google users
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade50,
-                    border: Border.all(color: Colors.amber.shade200),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.amber.shade700,
-                        size: 20,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF111111),
+                        size: 22,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Jika ini login pertama kali dari Google, gunakan "Lihat Password Lama" untuk melihat password yang sudah terisi otomatis.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.amber.shade900,
-                          ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Reset Password',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111111),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      Image.asset(
+                        Assets.image.png.resetPasswordIlustration.path,
+                        height: 220,
+                      ),
+                      const SizedBox(height: 28),
+                      const Text(
+                        'Reset Password',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111111),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // Old Password Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Password Lama',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111111),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Masukkan password lama dan password baru untuk\nmengatur ulang kata sandi Anda.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                          height: 1.6,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildPasswordField(
-                      controller: _oldPasswordController,
-                      hintText: 'Masukkan password lama',
-                      obscure: !_showOldPassword,
-                      onToggleVisibility: () {
-                        setState(() => _showOldPassword = !_showOldPassword);
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // New Password Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Password Baru',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111111),
+                      const SizedBox(height: 32),
+                      _buildPasswordField(
+                        label: 'Password Lama',
+                        controller: _oldPasswordController,
+                        hint: 'Masukkan password lama',
+                        obscure: !_showOldPassword,
+                        enabled: !_loading,
+                        onToggle: () {
+                          setState(() => _showOldPassword = !_showOldPassword);
+                        },
+                        validator: (v) => _sharedCode.emptyValidator(v),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildPasswordField(
-                      controller: _newPasswordController,
-                      hintText: 'Masukkan password baru (minimal 6 karakter)',
-                      obscure: !_showNewPassword,
-                      onToggleVisibility: () {
-                        setState(() => _showNewPassword = !_showNewPassword);
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // Confirm Password Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Konfirmasi Password Baru',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111111),
+                      const SizedBox(height: 14),
+                      _buildPasswordField(
+                        label: 'Password Baru',
+                        controller: _newPasswordController,
+                        hint: 'Masukkan password baru',
+                        obscure: !_showNewPassword,
+                        enabled: !_loading,
+                        onToggle: () {
+                          setState(() => _showNewPassword = !_showNewPassword);
+                        },
+                        validator: (v) {
+                          final base = _sharedCode.emptyValidator(v) ??
+                              _sharedCode.passwordValidator(v);
+                          if (base != null) return base;
+                          if (v?.trim() == _oldPasswordController.text.trim()) {
+                            return 'Password baru tidak boleh sama dengan yang lama';
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildPasswordField(
-                      controller: _confirmPasswordController,
-                      hintText: 'Konfirmasi password baru',
-                      obscure: !_showConfirmPassword,
-                      onToggleVisibility: () {
-                        setState(() =>
-                            _showConfirmPassword = !_showConfirmPassword);
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 32),
-
-                // Submit Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2F80ED),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                      const SizedBox(height: 14),
+                      _buildPasswordField(
+                        label: 'Konfirmasi Password Baru',
+                        controller: _confirmPasswordController,
+                        hint: 'Konfirmasi password baru',
+                        obscure: !_showConfirmPassword,
+                        enabled: !_loading,
+                        onToggle: () {
+                          setState(
+                              () => _showConfirmPassword = !_showConfirmPassword);
+                        },
+                        validator: (v) {
+                          final base = _sharedCode.emptyValidator(v);
+                          if (base != null) return base;
+                          if (v?.trim() != _newPasswordController.text.trim()) {
+                            return 'Password baru tidak cocok';
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                    child: _loading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2F80ED),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                          )
-                        : const Text(
-                            'Reset Password',
+                            elevation: 0,
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Reset Password',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed:
+                              _loading ? null : () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                              color: Color(0xFFD9DDE3),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Batal',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
+                              color: Color(0xFF111111),
                             ),
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
                   ),
                 ),
-
-                const SizedBox(height: 16),
-
-                // Cancel Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: OutlinedButton(
-                    onPressed: _loading ? null : () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                        color: Color(0xFFD9DDE3),
-                        width: 1.2,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Batal',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111111),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -361,70 +293,97 @@ class _ResetPasswordForGoogleUserScreenState
   }
 
   Widget _buildPasswordField({
+    required String label,
     required TextEditingController controller,
-    required String hintText,
+    required String hint,
     required bool obscure,
-    required VoidCallback onToggleVisibility,
+    required bool enabled,
+    required VoidCallback onToggle,
+    String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      enabled: !_loading,
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          color: Color(0xFFA7A7A7),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-            color: const Color(0xFFA7A7A7),
-            size: 20,
-          ),
-          onPressed: onToggleVisibility,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFD9DDE3),
-            width: 1.2,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF111111),
           ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFD9DDE3),
-            width: 1.2,
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          obscureText: obscure,
+          enabled: enabled,
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFA7A7A7),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                obscure
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: const Color(0xFFA7A7A7),
+                size: 20,
+              ),
+              onPressed: onToggle,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: Color(0xFFD9DDE3),
+                width: 1.2,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: Color(0xFFD9DDE3),
+                width: 1.2,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: Color(0xFF2F80ED),
+                width: 1.4,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: Colors.red,
+                width: 1.2,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: Colors.red,
+                width: 1.2,
+              ),
+            ),
+          ),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF111111),
           ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFF2F80ED),
-            width: 1.4,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.2,
-          ),
-        ),
-      ),
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: Color(0xFF111111),
-      ),
+      ],
     );
   }
 }

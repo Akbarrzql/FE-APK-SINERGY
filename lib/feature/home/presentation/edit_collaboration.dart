@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import '../../../../core/common/color_value.dart';
+import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 
 // Model data kolaborasi yang akan diedit
 class CollaborationData {
+  final String? id;
   final String title;
   final String description;
   final String category;
@@ -13,6 +17,7 @@ class CollaborationData {
   final String? imageUrl;
 
   const CollaborationData({
+    this.id,
     required this.title,
     required this.description,
     required this.category,
@@ -88,15 +93,46 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   }
 
   Future<void> _pickImage() async {
-    // TODO: implementasi image_picker
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked != null) setState(() => _newImagePath = picked.path);
   }
 
-  void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // TODO: kirim data update ke backend
-      Navigator.pop(context);
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final id = widget.initialData?.id;
+    if (id == null) {
+      // If no id provided, inform user and abort.
+      AuthUiHelper.showError(context, 'ID kolaborasi tidak tersedia.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await CollaborationService().updateCollaboration(
+        id: id,
+        title: _titleController.text.trim(),
+        description: _descController.text.trim(),
+        category: _categoryController.text.trim(),
+        status: _selectedStatus,
+        repositoryLink: _repoController.text.trim(),
+        url: _urlController.text.trim(),
+        imagePath: _newImagePath,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // remove loading
+      AuthUiHelper.showSuccess(context, 'Perubahan berhasil disimpan.');
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      AuthUiHelper.showError(context, AuthUiHelper.readableError(e));
     }
   }
 
@@ -161,12 +197,12 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: _newImagePath != null
-                              ? Image.asset(
-                            _newImagePath!,
-                            height: 220,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
+                                  ? Image.file(
+                                      File(_newImagePath!),
+                                      height: 220,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
                               : _existingImageUrl != null
                               ? Image.network(
                             _existingImageUrl!,
@@ -237,7 +273,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 7),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.55),
+                              color: Colors.black.withValues(alpha: 0.55),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Row(
@@ -295,6 +331,9 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                         controller: _descController,
                         hint: 'Tambahkan Deskripsi',
                         maxLines: 4,
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Deskripsi wajib diisi'
+                            : null,
                       ),
 
                       const SizedBox(height: 16),
@@ -305,6 +344,9 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                       _buildTextField(
                         controller: _categoryController,
                         hint: 'Tambahkan Kategori',
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Kategori wajib diisi'
+                            : null,
                       ),
 
                       const SizedBox(height: 16),
@@ -324,6 +366,9 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                         hint: 'https://github.com/...',
                         keyboardType: TextInputType.url,
                         prefixIcon: Icons.code_rounded,
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Link repository wajib diisi'
+                            : null,
                       ),
 
                       const SizedBox(height: 16),
@@ -336,6 +381,9 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                         hint: 'https://...',
                         keyboardType: TextInputType.url,
                         prefixIcon: Icons.link_rounded,
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'URL wajib diisi'
+                            : null,
                       ),
 
                       const SizedBox(height: 32),
@@ -524,54 +572,66 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   }
 
   void _showDeleteDialog(BuildContext context) {
-    showDialog(
+    AuthUiHelper.showAppDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Hapus Kolaborasi?',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: ColorValue.textPrimary,
-          ),
+      title: 'Hapus Kolaborasi?',
+      barrierDismissible: false,
+      content: const Text(
+        'Kolaborasi ini akan dihapus secara permanen dan tidak dapat dikembalikan.',
+        style: TextStyle(
+          fontSize: 14,
+          color: ColorValue.textSecondary,
+          height: 1.5,
         ),
-        content: const Text(
-          'Kolaborasi ini akan dihapus secara permanen dan tidak dapat dikembalikan.',
-          style: TextStyle(
-            fontSize: 14,
-            color: ColorValue.textSecondary,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Batal',
-              style: TextStyle(
-                color: ColorValue.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // tutup dialog
-              // TODO: delete API call
-              Navigator.pop(context); // kembali ke list
-            },
-            child: const Text(
-              'Hapus',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'Batal',
+            style: TextStyle(
+              color: ColorValue.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            final id = widget.initialData?.id;
+            if (id == null) {
+              AuthUiHelper.showError(context, 'ID kolaborasi tidak tersedia.');
+              return;
+            }
+
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const Center(child: CircularProgressIndicator()),
+            );
+
+            try {
+              await CollaborationService().deleteCollaboration(id: id);
+              if (!mounted) return;
+              Navigator.of(context).pop(); // remove loading
+              Navigator.of(context).pop(true); // close editor and signal deletion
+              AuthUiHelper.showSuccess(context, 'Kolaborasi berhasil dihapus.');
+            } catch (e) {
+              if (!mounted) return;
+              Navigator.of(context).pop();
+              AuthUiHelper.showError(context, AuthUiHelper.readableError(e));
+            }
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text(
+            'Hapus',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

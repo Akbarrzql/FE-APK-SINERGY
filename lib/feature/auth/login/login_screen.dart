@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
@@ -139,70 +140,53 @@ class _LoginScreenState extends State<LoginScreen> {
 
        // ❌ Regular error - show snack bar
        if (!context.mounted) return;
-       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(
-           content: Text(errorMessage),
-           behavior: SnackBarBehavior.floating,
-           backgroundColor: Colors.red.shade600,
-           duration: const Duration(seconds: 2),
-           action: SnackBarAction(label: 'Tutup', onPressed: () {}),
-         ),
-       );
+       AuthUiHelper.showError(context, errorMessage);
      } catch (e) {
        if (kDebugMode) {
          debugPrint('_handleLoginError: $e');
        }
        // Show original error
        if (!context.mounted) return;
-       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(
-           content: Text(errorMessage),
-           behavior: SnackBarBehavior.floating,
-           backgroundColor: Colors.red.shade600,
-           duration: const Duration(seconds: 4),
-           action: SnackBarAction(label: 'Tutup', onPressed: () {}),
-         ),
-       );
+       AuthUiHelper.showError(context, errorMessage);
      }
    }
 
    /// 💡 Dialog untuk Google-only users
    void _showGoogleUserOptions(BuildContext context, String email) {
-     showDialog(
+     AuthUiHelper.showAppDialog(
        context: context,
-       builder: (context) => AlertDialog(
-         title: const Text('Akun Google Terdeteksi'),
-         content: const Text(
-           'Akun Anda terdaftar via Google. Untuk login dengan email dan password manual, silakan reset password terlebih dahulu.',
+       title: 'Akun Google Terdeteksi',
+       content: const Text(
+         'Akun Anda terdaftar via Google. Untuk login dengan email dan kata sandi manual, silakan atur ulang kata sandi terlebih dahulu.',
+         style: TextStyle(
+           fontSize: 14,
+           height: 1.5,
+           color: Color(0xFF555555),
          ),
-         actions: [
-           TextButton(
-             onPressed: () => Navigator.pop(context),
-             child: const Text('Batal'),
-           ),
-           ElevatedButton(
-             onPressed: () {
-               Navigator.pop(context);
-               _goToResetPassword(context, email);
-             },
-             child: const Text('Reset Password'),
-           ),
-           ElevatedButton(
-             style: ElevatedButton.styleFrom(
-               backgroundColor: Colors.grey,
-             ),
-             onPressed: () {
-               Navigator.pop(context);
-               ScaffoldMessenger.of(context).showSnackBar(
-                 const SnackBar(
-                   content: Text('Silakan gunakan tombol "Masuk dengan Google"'),
-                 ),
-               );
-             },
-             child: const Text('Masuk dengan Google'),
-           ),
-         ],
        ),
+       actions: [
+         TextButton(
+           onPressed: () => Navigator.pop(context),
+           child: const Text('Batal'),
+         ),
+         ElevatedButton(
+           onPressed: () {
+             Navigator.pop(context);
+             _goToResetPassword(context, email);
+           },
+           child: const Text('Reset Password'),
+         ),
+         TextButton(
+           onPressed: () {
+             Navigator.pop(context);
+             AuthUiHelper.showInfo(
+               context,
+               'Silakan gunakan tombol "Masuk dengan Google".',
+             );
+           },
+           child: const Text('Masuk dengan Google'),
+         ),
+       ],
      );
    }
 
@@ -446,8 +430,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               try {
                                 await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(e.toString())),
+                                AuthUiHelper.showError(
+                                  context,
+                                  AuthUiHelper.readableError(
+                                    e,
+                                    fallback: 'Gagal masuk dengan Google. Silakan coba lagi.',
+                                  ),
                                 );
                               }
                             },

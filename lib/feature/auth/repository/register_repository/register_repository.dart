@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/auth/model/register_model/register_model.dart';
@@ -60,11 +61,11 @@ class RegisterRepositoryImpl implements RegisterRepository {
       try {
         final Map<String, dynamic> json = jsonDecode(response.body);
         if (json.containsKey('message')) {
-          message = json['message'].toString();
+          message = AuthUiHelper.toIndonesianMessage(json['message'].toString());
         } else if (json.containsKey('msg')) {
-          message = json['msg'].toString();
+          message = AuthUiHelper.toIndonesianMessage(json['msg'].toString());
         } else if (json.containsKey('details')) {
-          message = json['details'].toString();
+          message = AuthUiHelper.toIndonesianMessage(json['details'].toString());
         }
       } catch (_) {
         // ignore json parse errors
@@ -78,7 +79,7 @@ class RegisterRepositoryImpl implements RegisterRepository {
         message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
       }
 
-      throw ApiException(message, response.statusCode);
+      throw ApiException(AuthUiHelper.toIndonesianMessage(message), response.statusCode);
     }
   }
 
@@ -104,11 +105,11 @@ class RegisterRepositoryImpl implements RegisterRepository {
     try {
       final Map<String, dynamic> json = jsonDecode(response.body);
       if (json.containsKey('message')) {
-        message = json['message'].toString();
+        message = AuthUiHelper.toIndonesianMessage(json['message'].toString());
       } else if (json.containsKey('msg')) {
-        message = json['msg'].toString();
+        message = AuthUiHelper.toIndonesianMessage(json['msg'].toString());
       } else if (json.containsKey('error')) {
-        message = json['error'].toString();
+        message = AuthUiHelper.toIndonesianMessage(json['error'].toString());
       }
     } catch (_) {
       // ignore json parse errors
@@ -122,7 +123,7 @@ class RegisterRepositoryImpl implements RegisterRepository {
       message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
     }
 
-    throw ApiException(message, response.statusCode);
+    throw ApiException(AuthUiHelper.toIndonesianMessage(message), response.statusCode);
   }
 
   Future<http.Response> _postRegister({

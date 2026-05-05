@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
@@ -92,15 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                  ),
                );
              } else if (state is RegisterPageError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: Colors.red.shade600,
-                  duration: const Duration(seconds: 4),
-                  action: SnackBarAction(label: 'Tutup', onPressed: () {}),
-                ),
-              );
+              AuthUiHelper.showError(context, state.errorMessage);
             }
           },
           builder: (context, state) {
@@ -296,8 +289,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               try {
                                 await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(e.toString())),
+                                AuthUiHelper.showError(
+                                  context,
+                                  AuthUiHelper.readableError(
+                                    e,
+                                    fallback: 'Gagal masuk dengan Google. Silakan coba lagi.',
+                                  ),
                                 );
                               }
                             },

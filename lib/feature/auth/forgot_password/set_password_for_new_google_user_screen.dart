@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
@@ -8,7 +9,6 @@ import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
 import '../../../core/common/shared_code.dart';
 import '../../../core/widget/auth_text_field.dart';
-import '../login/login_screen.dart';
 
 class SetPasswordForNewGoogleUserScreen extends StatefulWidget {
   final String email;
@@ -51,17 +51,17 @@ class _SetPasswordForNewGoogleUserScreenState
 
     // Validasi
     if (password.isEmpty || confirmPassword.isEmpty) {
-      _showError('Password tidak boleh kosong');
+      _showError('Kata sandi tidak boleh kosong.');
       return;
     }
 
     if (password.length < 6) {
-      _showError('Password minimal 6 karakter');
+      _showError('Kata sandi minimal 6 karakter.');
       return;
     }
 
     if (password != confirmPassword) {
-      _showError('Password tidak cocok');
+      _showError('Kata sandi tidak cocok.');
       return;
     }
 
@@ -122,13 +122,7 @@ class _SetPasswordForNewGoogleUserScreenState
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password berhasil diatur! Selamat datang.'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AuthUiHelper.showSuccess(context, 'Kata sandi berhasil diatur! Selamat datang.');
 
       Future.delayed(const Duration(seconds: 2), () {
         if (!context.mounted) return;
@@ -141,12 +135,12 @@ class _SetPasswordForNewGoogleUserScreenState
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) debugPrint('SET PASSWORD FIREBASE ERROR: ${e.code} ${e.message}');
 
-      String errorMsg = e.message ?? 'Terjadi kesalahan';
+      String errorMsg = e.message ?? 'Terjadi kesalahan.';
 
       if (e.code == 'provider-already-linked') {
-        errorMsg = 'Email sudah terhubung ke akun lain dengan password';
+        errorMsg = 'Email sudah terhubung ke akun lain dengan kata sandi.';
       } else if (e.code == 'credential-already-in-use') {
-        errorMsg = 'Email ini sudah digunakan untuk akun lain';
+        errorMsg = 'Email ini sudah digunakan untuk akun lain.';
       }
 
       if (!context.mounted) return;
@@ -155,20 +149,19 @@ class _SetPasswordForNewGoogleUserScreenState
       if (kDebugMode) debugPrint('SET PASSWORD ERROR: $e');
 
       if (!context.mounted) return;
-      _showError('Gagal mengatur password: $e');
+      _showError(
+        AuthUiHelper.readableError(
+          e,
+          fallback: 'Gagal mengatur kata sandi. Silakan coba lagi.',
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    AuthUiHelper.showError(context, message);
   }
 
   @override

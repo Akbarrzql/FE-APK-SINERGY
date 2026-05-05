@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
 
@@ -184,7 +185,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     ),
                     GestureDetector(
                       child: Text(
-                        'Edit',
+                        'Ubah',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -197,6 +198,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                           MaterialPageRoute(
                             builder: (_) => EditCollaborationPage(
                               initialData: CollaborationData(
+                                id: '1',
                                 title: 'Moneyger Application Project',
                                 description:
                                     'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah. Aplikasi ini juga menawarkan berbagai fitur yang dapat membantu masyarakat mempermudah produktivitas mereka.',
@@ -316,10 +318,10 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: _statusColor(_projectStatus).withOpacity(0.08),
+                          color: _statusColor(_projectStatus).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(50),
                           border: Border.all(
-                            color: _statusColor(_projectStatus).withOpacity(0.2),
+                            color: _statusColor(_projectStatus).withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
@@ -506,73 +508,42 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
   }
 
   void _showStatusPicker(BuildContext context) {
-    showModalBottomSheet(
+    AuthUiHelper.showAppBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      title: 'Pilih Status',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ..._statusOptions.map((s) {
+            final isActive = s == _projectStatus;
+            return ListTile(
+              onTap: () {
+                setState(() => _projectStatus = s);
+                Navigator.pop(context);
+              },
+              leading: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _statusColor(s),
+                ),
+              ),
+              title: Text(
+                s,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                  color: isActive ? ColorValue.primaryColor : ColorValue.textPrimary,
+                ),
+              ),
+              trailing: isActive
+                  ? const Icon(Icons.check, color: ColorValue.primaryColor, size: 18)
+                  : null,
+            );
+          }),
+        ],
       ),
-      builder: (_) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Pilih Status',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: ColorValue.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ..._statusOptions.map((s) {
-                  final isActive = s == _projectStatus;
-                  return ListTile(
-                    onTap: () {
-                      setState(() => _projectStatus = s);
-                      Navigator.pop(context);
-                    },
-                    leading: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _statusColor(s),
-                      ),
-                    ),
-                    title: Text(
-                      s,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-                        color: isActive
-                            ? ColorValue.primaryColor
-                            : ColorValue.textPrimary,
-                      ),
-                    ),
-                    trailing: isActive
-                        ? const Icon(Icons.check,
-                        color: ColorValue.primaryColor, size: 18)
-                        : null,
-                  );
-                }),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 

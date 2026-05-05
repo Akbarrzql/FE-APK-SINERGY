@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 
@@ -39,15 +40,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() => _loading = true);
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email reset telah dikirim. Periksa inbox Anda.')),
-        );
+        AuthUiHelper.showSuccess(context, 'Email reset berhasil dikirim. Silakan periksa kotak masuk Anda.');
       }
     } catch (e) {
       if (kDebugMode) debugPrint('sendPasswordResetEmail error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengirim email: $e')),
-      );
+      if (mounted) {
+        AuthUiHelper.showError(
+          context,
+          AuthUiHelper.readableError(
+            e,
+            fallback: 'Gagal mengirim email reset. Silakan coba lagi.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -93,22 +98,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         } catch (_) {}
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Password berhasil disinkronkan ke server. Silakan masuk.')),
-          );
+          AuthUiHelper.showSuccess(context, 'Password berhasil disinkronkan ke server. Silakan masuk kembali.');
         }
       } else {
         String message = 'Gagal menyinkronkan ke server.';
         try {
           final Map<String, dynamic> json = jsonDecode(resp.body);
-          if (json.containsKey('message')) message = json['message'].toString();
-          else if (json.containsKey('error')) message = json['error'].toString();
+          if (json.containsKey('message')) {
+            message = AuthUiHelper.toIndonesianMessage(json['message'].toString());
+          } else if (json.containsKey('error')) {
+            message = AuthUiHelper.toIndonesianMessage(json['error'].toString());
+          }
         } catch (_) {}
         throw Exception(message);
       }
     } catch (e) {
       if (kDebugMode) debugPrint('sync password error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal sinkronisasi: $e')));
+      if (mounted) {
+        AuthUiHelper.showError(
+          context,
+          AuthUiHelper.readableError(
+            e,
+            fallback: 'Gagal menyinkronkan password ke server. Silakan coba lagi.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

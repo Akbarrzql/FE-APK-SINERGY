@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 import '../../../../core/common/color_value.dart';
 
 class CreateCollaborationPage extends StatefulWidget {
@@ -39,16 +42,40 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   }
 
   Future<void> _pickImage() async {
-    // TODO: implementasi image_picker
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) setState(() => _imagePath = picked.path);
   }
 
-  void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // TODO: kirim data ke backend
-      Navigator.pop(context);
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    // show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await CollaborationService().createCollaboration(
+        title: _titleController.text.trim(),
+        description: _descController.text.trim(),
+        category: _categoryController.text.trim(),
+        status: _selectedStatus,
+        repositoryLink: _repoController.text.trim(),
+        url: _urlController.text.trim(),
+        imagePath: _imagePath,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // remove loading
+      AuthUiHelper.showSuccess(context, 'Kolaborasi berhasil dibuat.');
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // remove loading
+      AuthUiHelper.showError(context, AuthUiHelper.readableError(e));
     }
   }
 
@@ -95,15 +122,15 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: GestureDetector(
                     onTap: _pickImage,
-                    child: ClipRRect(
+                      child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: _imagePath != null
-                          ? Image.asset(
-                        _imagePath!,
-                        height: 220,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
+                          ? Image.file(
+                              File(_imagePath!),
+                              height: 220,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            )
                           : Container(
                         height: 220,
                         width: double.infinity,
@@ -163,6 +190,9 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                         controller: _descController,
                         hint: 'Tambahkan Deksripsi',
                         maxLines: 4,
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Deskripsi wajib diisi'
+                            : null,
                       ),
 
                       const SizedBox(height: 16),
@@ -173,6 +203,9 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       _buildTextField(
                         controller: _categoryController,
                         hint: 'Tambahkan Kategori',
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Kategori wajib diisi'
+                            : null,
                       ),
 
                       const SizedBox(height: 16),
@@ -192,6 +225,8 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                         hint: 'https://github.com/...',
                         keyboardType: TextInputType.url,
                         prefixIcon: Icons.code_rounded,
+                        validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Link repository wajib diisi' : null,
                       ),
 
                       const SizedBox(height: 16),
@@ -204,6 +239,8 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                         hint: 'https://...',
                         keyboardType: TextInputType.url,
                         prefixIcon: Icons.link_rounded,
+                        validator: (v) =>
+                        (v == null || v.isEmpty) ? 'URL wajib diisi' : null,
                       ),
 
                       const SizedBox(height: 32),
@@ -213,7 +250,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: _submit,
+                          onPressed: (){},
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ColorValue.primaryColor,
                             foregroundColor: Colors.white,

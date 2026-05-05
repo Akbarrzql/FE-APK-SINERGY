@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/auth_session_manager.dart';
+import 'package:gabungyuk/core/common/color_value.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/edit_password_screen.dart';
 import '../../model/profile_model.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/stat_card_widget.dart';
@@ -11,9 +14,6 @@ import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
-import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/reset_password_for_google_user_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -45,15 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: BlocListener<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.red.shade600,
-                duration: const Duration(seconds: 4),
-                action: SnackBarAction(label: 'Tutup', onPressed: () {}),
-              ),
-            );
+            AuthUiHelper.showError(context, state.message);
           }
         },
         child: Scaffold(
@@ -134,27 +126,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }),
                  const SizedBox(height: 2),
                  _menuItem(Icons.lock_open_rounded, 'Reset Password', () async {
-                   // Smart routing: check if Google user or email user
-                   await _handleResetPasswordTap(context);
+                   final result = await Navigator.push<bool?>(
+                     context,
+                     MaterialPageRoute(
+                       builder: (context) => const EditPasswordScreen(),
+                     ),
+                   );
+
+                   if (result == true) {
+                     _profileBloc.add(LoadProfile());
+                   }
                  }),
                  const SizedBox(height: 2),
                 _menuItem(Icons.logout, 'Keluar', () async {
-                  final confirm = await showDialog<bool>(
+                  final confirm = await AuthUiHelper.showAppDialog<bool>(
                     context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Konfirmasi'),
-                      content: const Text('Anda yakin ingin keluar dari akun?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Batal'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Keluar'),
-                        ),
-                      ],
+                    title: 'Konfirmasi',
+                    content: const Text(
+                      'Anda yakin ingin keluar dari akun?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: Color(0xFF555555),
+                      ),
                     ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: Text('Batal', style: TextStyle(color: ColorValue.primaryColor)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        child: const Text('Keluar'),
+                      ),
+                    ],
                   );
 
                   if (confirm == true) {
@@ -259,65 +265,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// 🔑 Smart reset password routing
-  Future<void> _handleResetPasswordTap(BuildContext context) async {
-    try {
-      // Get current profile email from bloc
-      final state = _profileBloc.state;
-      String? email;
-      if (state is ProfileLoaded) {
-        email = state.profile.email;
-      }
-
-      if (email == null || email.isEmpty) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email tidak ditemukan')),
-        );
-        return;
-      }
-
-      // At this point email is guaranteed to be non-empty
-      final emailStr = email;
-
-      // Check if this is a Google user
-      final userData =
-          await FirebaseUserSyncHelper.instance.findUserByEmail(emailStr);
-
-      if (userData != null) {
-        final provider = userData['provider']?.toString() ?? '';
-        final hasLocalPassword =
-            userData['has_local_password'] as bool? ?? true;
-
-        if (!context.mounted) return;
-
-        // Google user without local password
-        if (provider == 'google' && !hasLocalPassword) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  ResetPasswordForGoogleUserScreen(email: emailStr),
-            ),
-          );
-          return;
-        }
-      }
-
-      // Regular email user or Google user with existing password
-      if (!context.mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      debugPrint('Error in _handleResetPasswordTap: $e');
-      // Fallback to regular reset
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
-      );
-    }
-  }
 }

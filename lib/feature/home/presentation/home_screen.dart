@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/category_chip.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/collaboration_card.dart';
+import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
+import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
 import '../../../core/common/color_value.dart';
 import 'create_collaboration.dart';
@@ -15,6 +17,54 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedCategoryIndex = 1;
+  final ProfileRepository _profileRepository = ProfileRepositoryImpl();
+  ViewProfileModel? _profile;
+  bool _isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final profile = await _profileRepository.getViewProfile();
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
+      debugPrint('Error fetching profile: $e');
+    }
+  }
+
+  Widget _buildProfileAvatar(String? source) {
+    final imageUrl = source?.trim() ?? '';
+    return ClipOval(
+      child: Container(
+        width: 52,
+        height: 52,
+        color: Colors.blue,
+        child: imageUrl.isEmpty
+            ? const Icon(Icons.person, color: Colors.white, size: 30)
+            : Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                width: 52,
+                height: 52,
+                errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 30),
+              ),
+      ),
+    );
+  }
 
   final List<String> _categories = [
     'Web Development',
@@ -91,29 +141,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Row(
                       children: [
-                        const CircleAvatar(
-                          radius: 26,
-                          backgroundImage:
-                          NetworkImage('https://i.pravatar.cc/150?img=8'),
-                          backgroundColor: Colors.grey,
-                        ),
+                        _buildProfileAvatar(_profile?.profilePicture),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Magnus Carlsen',
-                                style: TextStyle(
+                                _isLoadingProfile ? 'Loading...' : (_profile?.namaLengkap ?? 'Guest'),
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: ColorValue.textPrimary,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                'Android Developer',
-                                style: TextStyle(
+                                _isLoadingProfile ? '...' : (_profile?.institusi ?? 'No Institution'),
+                                style: const TextStyle(
                                   fontSize: 13,
                                   color: ColorValue.textSecondary,
                                 ),

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../core/common/deep_link_service.dart';
 import '../../core/common/shared_code.dart';
 import '../../../../core/gen/assets.gen.dart';
 import '../../core/widget/bottom_navigation.dart';
@@ -21,10 +20,6 @@ class _SplashScreenState extends State<SplashScreen> {
   Timer? _splashTimer;
 
   Future<void> _routeAfterSplash() async {
-    if (DeepLinkService.instance.bypassSplash) {
-      return;
-    }
-
     final token = await _sharedCode.getAuthToken();
     if (!mounted) return;
 
@@ -70,7 +65,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _startSplashScreen();
   }

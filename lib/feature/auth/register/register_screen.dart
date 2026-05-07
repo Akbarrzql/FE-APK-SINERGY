@@ -5,11 +5,11 @@ import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
+import '../forgot_password/reset_password_screen.dart';
 
 import '../../../../core/gen/assets.gen.dart';
 import '../../../../core/gen/fonts.gen.dart';
 import '../../../core/common/shared_code.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../service/firebase_integration_service.dart';
 import '../../../core/widget/bottom_navigation.dart';
@@ -187,7 +187,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                                MaterialPageRoute(
+                                  builder: (context) => ResetPasswordScreen(
+                                    email: _emailController.text.trim(),
+                                  ),
+                                ),
                               );
                             },
                       style: TextButton.styleFrom(

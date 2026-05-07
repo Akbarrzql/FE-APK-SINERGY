@@ -6,13 +6,12 @@ import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_state.dart';
+import '../forgot_password/reset_password_screen.dart';
 import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import '../../../core/widget/auth_text_field.dart';
 import '../service/firebase_integration_service.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/reset_password_for_google_user_screen.dart';
 
 import '../../../../core/gen/assets.gen.dart';
 import '../../../../core/gen/fonts.gen.dart';
@@ -194,8 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
      Navigator.push(
        context,
        MaterialPageRoute(
-         builder: (context) =>
-             ResetPasswordForGoogleUserScreen(email: email),
+         builder: (context) => ResetPasswordScreen(email: email),
        ),
      );
    }
@@ -328,7 +326,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ForgotPasswordScreen(),
+                                  builder: (context) => ResetPasswordScreen(
+                                    email: _emailController.text.trim(),
+                                  ),
                                 ),
                               );
                             },

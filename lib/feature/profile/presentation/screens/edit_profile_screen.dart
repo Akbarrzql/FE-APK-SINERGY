@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -12,6 +13,8 @@ import 'package:gabungyuk/core/common/permission_handler.dart' as perm_helper;
 import 'package:gabungyuk/feature/profile/bloc/profile_bloc.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final ProfileModel? profile;
@@ -30,11 +33,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _keahlianController;
   late final TextEditingController _lokasiController;
   late final TextEditingController _whatsappController;
+  late final TextEditingController _instagramController;
+  late final TextEditingController _facebookController;
+  late final TextEditingController _linkedinController;
+  final FocusNode _keahlianFocusNode = FocusNode();
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImageFile; // stores the picked image file
   bool _imageRemoved = false; // flag to indicate if user explicitly removed the image
-
-  final ProfileRepositoryImpl _repo = ProfileRepositoryImpl();
+  List<String> _keahlianList = [];
 
   @override
   void initState() {
@@ -44,9 +50,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController = TextEditingController(text: p?.email ?? '');
     _institusiController = TextEditingController(text: p?.institusi?.toString() ?? '');
     _bioController = TextEditingController(text: p?.bio?.toString() ?? '');
-    _keahlianController = TextEditingController(text: p?.keahlian?.toString() ?? '');
+    _keahlianController = TextEditingController();
+    _keahlianList = List<String>.from(p?.keahlian ?? []);
     _lokasiController = TextEditingController(text: p?.lokasi?.toString() ?? '');
     _whatsappController = TextEditingController(text: p?.whatsapp?.toString() ?? '');
+    _instagramController = TextEditingController(text: p?.instagram?.toString() ?? '');
+    _facebookController = TextEditingController(text: p?.facebook?.toString() ?? '');
+    _linkedinController = TextEditingController(text: p?.linkedin?.toString() ?? '');
     // If existing profile picture is a data URI, keep it available (do not decode now)
     // _pickedImageDataUri stays null unless user picks a new image or removes it
   }
@@ -60,15 +70,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _keahlianController.dispose();
     _lokasiController.dispose();
     _whatsappController.dispose();
+    _instagramController.dispose();
+    _facebookController.dispose();
+    _linkedinController.dispose();
+    _keahlianFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _onSave() async {
+    // Tambahkan teks yang tersisa di input keahlian jika ada
+    if (_keahlianController.text.trim().isNotEmpty) {
+      _addKeahlian(_keahlianController.text);
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
-    // Build body with only changed fields to avoid sending empty/unnecessary values
     final body = <String, dynamic>{};
     final p = widget.profile;
+    
     final nameVal = _nameController.text.trim();
     if (nameVal != (p?.namaLengkap ?? '')) body['namaLengkap'] = nameVal;
 
@@ -79,10 +98,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (institusiVal != (p?.institusi?.toString() ?? '')) body['institusi'] = institusiVal;
 
     final bioVal = _bioController.text.trim();
-    if (bioVal != (p?.bio?.toString() ?? '')) body['bio'] = bioVal;
+    if (bioVal != (p?.bio ?? '')) body['bio'] = bioVal;
 
-    final keahlianVal = _keahlianController.text.trim();
-    if (keahlianVal != (p?.keahlian?.toString() ?? '')) body['keahlian'] = keahlianVal;
+    // Keahlian logic using list
+    final currentKeahlian = p?.keahlian ?? [];
+    bool listChanged = _keahlianList.length != currentKeahlian.length;
+    if (!listChanged) {
+      for (int i = 0; i < _keahlianList.length; i++) {
+        if (_keahlianList[i] != currentKeahlian[i]) {
+          listChanged = true;
+          break;
+        }
+      }
+    }
+    if (listChanged) {
+      body['keahlian'] = _keahlianList;
+    }
 
     final lokasiVal = _lokasiController.text.trim();
     if (lokasiVal != (p?.lokasi?.toString() ?? '')) body['lokasi'] = lokasiVal;
@@ -90,131 +121,150 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final whatsappVal = _whatsappController.text.trim();
     if (whatsappVal != (p?.whatsapp?.toString() ?? '')) body['whatsapp'] = whatsappVal;
 
-    // If user explicitly removed image, send empty string to backend
+    final instagramVal = _instagramController.text.trim();
+    if (instagramVal != (p?.instagram?.toString() ?? '')) body['instagram'] = instagramVal;
+
+    final facebookVal = _facebookController.text.trim();
+    if (facebookVal != (p?.facebook?.toString() ?? '')) body['facebook'] = facebookVal;
+
+    final linkedinVal = _linkedinController.text.trim();
+    if (linkedinVal != (p?.linkedin?.toString() ?? '')) body['linkedin'] = linkedinVal;
+
     if (_imageRemoved) {
       body['profilePicture'] = '';
     }
 
-    try {
-      // Get File object if image was picked (or null if no image)
-      File? imageFileToUpload;
-      if (_pickedImageFile != null) {
-        imageFileToUpload = File(_pickedImageFile!.path);
-      }
-
-      final res = await _repo.updateProfile(body, profileImageFile: imageFileToUpload);
-      AuthUiHelper.showSuccess(context, res.message);
-
-      // trigger reload of profile
-      try {
-        context.read<ProfileBloc>().add(LoadProfile());
-      } catch (_) {}
-
-      // Notify previous screen that update happened
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      String msg = 'Terjadi kesalahan. Silakan coba lagi.';
-      if (e is ApiException) msg = e.message;
-      AuthUiHelper.showError(context, msg);
+    File? imageFileToUpload;
+    if (_pickedImageFile != null) {
+      imageFileToUpload = File(_pickedImageFile!.path);
     }
+
+    context.read<ProfileBloc>().add(
+          UpdateProfile(body: body, profileImageFile: imageFileToUpload),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return BlocListener<ProfileBloc, ProfileState>(
+      listener: (context, state) {
+        if (state is ProfileUpdateSuccess) {
+          AuthUiHelper.showSuccess(context, state.message);
+          Navigator.of(context).pop(true);
+        } else if (state is ProfileError) {
+          AuthUiHelper.showError(context, state.message);
+        }
+      },
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context), // Kembali ke Profile
-        ),
-        title: Text(
-          'Edit Profile',
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _onSave,
-            child: Text(
-              'Simpan',
-              style: GoogleFonts.poppins(
-                color: Colors.blue,
-                fontWeight: FontWeight.w600,
-              ),
+          title: Text(
+            'Edit Profile',
+            style: GoogleFonts.poppins(
+              color: Colors.black,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
             ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 55,
-                      backgroundColor: Colors.blue.shade100,
-                      child: _buildProfileAvatarContent(),
+          actions: [
+            BlocBuilder<ProfileBloc, ProfileState>(
+              builder: (context, state) {
+                if (state is ProfileUpdating) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 16),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: _showImageSourceActionSheet,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            color: Colors.white,
-                            size: 16,
+                  );
+                }
+                return TextButton(
+                  onPressed: _onSave,
+                  child: Text(
+                    'Simpan',
+                    style: GoogleFonts.poppins(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 55,
+                        backgroundColor: Colors.blue.shade100,
+                        child: _buildProfileAvatarContent(),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: _showImageSourceActionSheet,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 30),
-
-              _buildLabel('Nama Lengkap'),
-              _buildTextField(_nameController, 'Nama Lengkap'),
-
-              _buildLabel('Email'),
-              _buildTextField(_emailController, 'Email', enabled: false),
-
-              _buildLabel('Institusi'),
-              _buildTextField(_institusiController, 'Institusi'),
-
-              _buildLabel('Bio'),
-              _buildTextField(_bioController, 'Bio', isBio: true),
-
-              _buildLabel('Keahlian'),
-              _buildTextField(_keahlianController, 'Keahlian'),
-              const SizedBox(height: 20),
-
-              _buildLabel('Lokasi'),
-              _buildTextField(_lokasiController, 'Lokasi'),
-              const SizedBox(height: 12),
-
-              _buildLabel('WhatsApp'),
-              _buildTextField(_whatsappController, 'WhatsApp'),
-              const SizedBox(height: 30),
-            ],
+                const SizedBox(height: 30),
+                _buildLabel('Nama Lengkap'),
+                _buildTextField(_nameController, 'Nama Lengkap'),
+                _buildLabel('Email'),
+                _buildTextField(_emailController, 'Email', enabled: false),
+                _buildLabel('Institusi'),
+                _buildTextField(_institusiController, 'Institusi'),
+                _buildLabel('Bio'),
+                _buildTextField(_bioController, 'Bio', isBio: true),
+                _buildLabel('Keahlian'),
+                _buildKeahlianInput(),
+                const SizedBox(height: 20),
+                _buildLabel('Lokasi'),
+                _buildTextField(_lokasiController, 'Lokasi'),
+                const SizedBox(height: 12),
+                _buildLabel('WhatsApp'),
+                _buildTextField(_whatsappController, 'WhatsApp'),
+                _buildLabel('Instagram'),
+                _buildTextField(_instagramController, 'Instagram'),
+                _buildLabel('Facebook'),
+                _buildTextField(_facebookController, 'Facebook'),
+                _buildLabel('LinkedIn'),
+                _buildTextField(_linkedinController, 'LinkedIn'),
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
       ),
@@ -454,6 +504,86 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
       ),
     );
+  }
+
+  Widget _buildKeahlianInput() {
+    return GestureDetector(
+      onTap: () => _keahlianFocusNode.requestFocus(),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade200),
+          color: Colors.white,
+        ),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 0,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ..._keahlianList.map((skill) => Chip(
+                  label: Text(
+                    skill,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                  onDeleted: () {
+                    setState(() {
+                      _keahlianList.remove(skill);
+                    });
+                  },
+                  backgroundColor: Colors.blue.shade50,
+                  deleteIcon: Icon(Icons.cancel, size: 16, color: Colors.blue.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    // borderSide: BorderSide(color: Colors.blue.shade100),
+                  ),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                )),
+            IntrinsicWidth(
+              child: TextField(
+                controller: _keahlianController,
+                focusNode: _keahlianFocusNode,
+                style: GoogleFonts.poppins(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: _keahlianList.isEmpty ? 'Contoh: Flutter, UI/UX' : null,
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onChanged: (val) {
+                  if (val.isNotEmpty && (val.endsWith(' ') || val.endsWith(','))) {
+                    _addKeahlian(val.substring(0, val.length - 1));
+                  }
+                },
+                onSubmitted: (val) {
+                  _addKeahlian(val);
+                  _keahlianFocusNode.requestFocus();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addKeahlian(String val) {
+    final clean = val.trim();
+    if (clean.isNotEmpty) {
+      if (!_keahlianList.contains(clean)) {
+        setState(() {
+          _keahlianList.add(clean);
+        });
+      }
+      _keahlianController.clear();
+    } else {
+      _keahlianController.clear();
+    }
   }
 
   // Helper untuk TextField agar bentuknya rapi dan konsisten

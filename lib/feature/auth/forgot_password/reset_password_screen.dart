@@ -3,9 +3,17 @@ import 'package:flutter/material.dart';
 import '../../../core/common/color_value.dart';
 import '../../../core/common/shared_code.dart';
 import '../../../core/gen/assets.gen.dart';
+import 'package:gabungyuk/feature/auth/service/reset_password_service.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  final String? email;
+  final String? otp;
+
+  /// If [email] and [otp] are provided this screen will attempt to reset
+  /// password for that email using the OTP as the oldPassword (backend
+  /// verification). If not provided, the regular flow can be implemented.
+  const ResetPasswordScreen({this.email, this.otp, super.key});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -13,6 +21,7 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _emailController;
   final _newPasswordController = TextEditingController();
 
   bool _obscureOld = true;
@@ -21,13 +30,54 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final SharedCode _sharedCode = SharedCode();
 
   @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.email);
+  }
+
+  @override
   void dispose() {
+    _emailController.dispose();
     _newPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    if (_formKey.currentState == null) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    setState(() => _isSubmitting = true);
+    try {
+      final email = _emailController.text.trim();
+      final newPassword = _newPasswordController.text.trim();
+      
+      if (email.isEmpty) {
+        throw Exception('Email tidak boleh kosong.');
+      }
+
+      // Gunakan resetPasswordWithOtp yang sudah disiapkan di service
+      await ResetPasswordService.instance.resetPasswordWithOtp(
+        email: email,
+        newPassword: newPassword,
+      );
+
+      if (!mounted) return;
+      AuthUiHelper.showSuccess(context, 'Kata Sandi berhasil diperbarui. Silakan masuk dengan kata sandi baru.');
+      
+      // Kembali ke layar login (asumsi login adalah root atau pemicu alur ini)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (e) {
+      if (!mounted) return;
+      AuthUiHelper.showError(
+        context,
+        AuthUiHelper.readableError(
+          e,
+          fallback: 'Gagal memperbarui kata sandi. Silakan coba lagi.',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -86,7 +136,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Masukkan kata sandi baru untuk\nmengatur ulang kata sandi Anda.',
+                        'Masukkan email dan kata sandi baru untuk\nmengatur ulang kata sandi Anda.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
@@ -96,6 +146,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
 
                       const SizedBox(height: 32),
+
+                      _buildTextField(
+                        controller: _emailController,
+                        hint: 'Masukkan email Anda',
+                        enabled: !_isSubmitting,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _sharedCode.emailValidator,
+                      ),
+
+                      const SizedBox(height: 16),
 
                       _buildPasswordField(
                         controller: _newPasswordController,
@@ -154,6 +214,51 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required bool enabled,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      enabled: enabled,
+      validator: validator,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[200]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[200]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+          const BorderSide(color: ColorValue.primaryColor, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
       ),
     );

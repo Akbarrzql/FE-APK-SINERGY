@@ -71,4 +71,14 @@ class FirebaseUserSyncHelper {
 
     return snapshot.docs.first.data();
   }
+
+  /// Update FCM Token untuk push notifications
+  Future<void> updateFcmToken(String email, String token) async {
+    final docId = email.trim();
+    final ref = _firestore.collection('users').doc(docId);
+    await ref.set({
+      'fcm_token': token,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 }

@@ -115,7 +115,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   final result = await Navigator.push<bool?>(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditProfileScreen(profile: p),
+                      builder: (context) => BlocProvider.value(
+                        value: _profileBloc,
+                        child: EditProfileScreen(profile: p),
+                      ),
                     ),
                   );
 

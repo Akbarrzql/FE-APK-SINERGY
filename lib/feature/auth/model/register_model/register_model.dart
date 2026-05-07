@@ -39,11 +39,14 @@ class Data {
   int expiredAt;
   String namaLengkap;
   dynamic profilePicture;
-  dynamic institusi;
-  dynamic bio;
-  dynamic keahlian;
-  dynamic lokasi;
-  dynamic whatsapp;
+  String institusi;
+  String bio;
+  List<String> keahlian;
+  String lokasi;
+  String whatsapp;
+  String instagram;
+  String facebook;
+  String linkedin;
 
   Data({
     required this.userId,
@@ -57,6 +60,9 @@ class Data {
     required this.keahlian,
     required this.lokasi,
     required this.whatsapp,
+    required this.instagram,
+    required this.facebook,
+    required this.linkedin,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -68,9 +74,12 @@ class Data {
     profilePicture: json["profilePicture"],
     institusi: json["institusi"],
     bio: json["bio"],
-    keahlian: json["keahlian"],
+    keahlian: List<String>.from(json["keahlian"].map((x) => x)),
     lokasi: json["lokasi"],
     whatsapp: json["whatsapp"],
+    instagram: json["instagram"],
+    facebook: json["facebook"],
+    linkedin: json["linkedin"],
   );
 
   Map<String, dynamic> toJson() => {
@@ -82,8 +91,11 @@ class Data {
     "profilePicture": profilePicture,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": keahlian,
+    "keahlian": List<dynamic>.from(keahlian.map((x) => x)),
     "lokasi": lokasi,
     "whatsapp": whatsapp,
+    "instagram": instagram,
+    "facebook": facebook,
+    "linkedin": linkedin,
   };
 }

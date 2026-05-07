@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-ProfileModel profileModelFromJson(String str) => ProfileModel.fromJson(json.decode(str));
+ViewProfileModel viewProfileModelFromJson(String str) => ViewProfileModel.fromJson(json.decode(str));
 
-String profileModelToJson(ProfileModel data) => json.encode(data.toJson());
+String viewProfileModelToJson(ViewProfileModel data) => json.encode(data.toJson());
 
-class ProfileModel {
+class ViewProfileModel {
   int idPengguna;
   String profilePicture;
   String namaLengkap;
@@ -18,7 +18,7 @@ class ProfileModel {
   String facebook;
   String linkedin;
 
-  ProfileModel({
+  ViewProfileModel({
     required this.idPengguna,
     required this.profilePicture,
     required this.namaLengkap,
@@ -33,9 +33,9 @@ class ProfileModel {
     required this.linkedin,
   });
 
-  factory ProfileModel.fromJson(Map<String, dynamic> json) {
+  factory ViewProfileModel.fromJson(Map<String, dynamic> json) {
     final data = json["data"] != null ? json["data"] : json;
-    return ProfileModel(
+    return ViewProfileModel(
       idPengguna: data["idPengguna"] ?? 0,
       profilePicture: data["profilePicture"]?.toString() ?? '',
       namaLengkap: data["namaLengkap"] ?? '',

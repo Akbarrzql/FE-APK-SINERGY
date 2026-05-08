@@ -3,6 +3,10 @@ import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
 
+import 'package:gabungyuk/feature/home/model/detail_project_model.dart';
+import 'package:gabungyuk/feature/home/model/view_project_model.dart';
+import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
+import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
 import 'edit_collaboration.dart';
 
 // ─── Member Tile Widget ───────────────────────────────────────────────────────
@@ -29,8 +33,13 @@ class MemberTile extends StatelessWidget {
           // Avatar
           CircleAvatar(
             radius: 28,
-            backgroundImage: NetworkImage(imageUrl),
             backgroundColor: Colors.grey[200],
+            backgroundImage: (imageUrl.isNotEmpty && imageUrl.startsWith('http'))
+                ? NetworkImage(imageUrl)
+                : null,
+            child: (imageUrl.isEmpty || !imageUrl.startsWith('http'))
+                ? const Icon(Icons.person, color: Colors.grey, size: 30)
+                : null,
           ),
           const SizedBox(width: 14),
 
@@ -85,52 +94,87 @@ class MemberTile extends StatelessWidget {
 
 // ─── Detail Collaboration Screen ──────────────────────────────────────────────
 class DetailCollaboration extends StatefulWidget {
-  const DetailCollaboration({super.key});
+  final Datum project;
+  final ViewProfileModel? owner;
+
+  const DetailCollaboration({
+    super.key,
+    required this.project,
+    this.owner,
+  });
 
   @override
   State<DetailCollaboration> createState() => _DetailCollaborationState();
 }
 
 class _DetailCollaborationState extends State<DetailCollaboration> {
+  final CollaborationService _collaborationService = CollaborationService();
+  bool _isLoading = true;
+  DetailProjectModel? _detailModel;
   bool _isExpanded = false;
+  late String _projectStatus;
 
-  final String _fullDescription =
-      'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah. Aplikasi ini juga menawarkan berbagai fitur yang dapat membantu masyarakat mempermudah produktivitas mereka.';
+  @override
+  void initState() {
+    super.initState();
+    _projectStatus = _mapBackendStatus(widget.project.status);
+    _fetchProjectDetail();
+  }
 
-  final List<Map<String, dynamic>> _members = [
-    {
-      'name': 'Alexander Arnold',
-      'role': 'Pemilik Kolaborasi',
-      'imageUrl': 'https://i.pravatar.cc/150?img=51',
-      'rating': 120,
-    },
-    {
-      'name': 'Sam Smith',
-      'role': 'Back End',
-      'imageUrl': 'https://i.pravatar.cc/150?img=12',
-      'rating': 60,
-    },
-    {
-      'name': 'James Arthur',
-      'role': 'Back End',
-      'imageUrl': 'https://i.pravatar.cc/150?img=33',
-      'rating': 85,
-    },
-    {
-      'name': 'David Silva',
-      'role': 'Front End',
-      'imageUrl': 'https://i.pravatar.cc/150?img=68',
-      'rating': 55,
-    },
-    {
-      'name': 'Luna Park',
-      'role': 'UI/UX Designer',
-      'imageUrl': 'https://i.pravatar.cc/150?img=47',
-      'rating': 90,
-    },
-  ];
+  Future<void> _fetchProjectDetail() async {
+    try {
+      final detail = await _collaborationService.getProjectDetail(widget.project.id);
+      if (mounted) {
+        setState(() {
+          _detailModel = detail;
+          _isLoading = false;
+          if (detail.data.project.status.isNotEmpty) {
+            _projectStatus = _mapBackendStatus(detail.data.project.status);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      debugPrint('Error fetching project detail: $e');
+    }
+  }
 
-  String _projectStatus = 'Belum Dimulai';
+  String _mapBackendStatus(String? status) {
+    if (status == null) return 'Belum Dimulai';
+    
+    // Jika status sudah dalam bahasa Indonesia, langsung kembalikan
+    if (_statusOptions.contains(status)) return status;
+
+    switch (status.toUpperCase()) {
+      case 'OPEN':
+        return 'Sedang Berjalan';
+      case 'DONE':
+        return 'Selesai';
+      case 'HOLD':
+        return 'Ditunda';
+      case 'NOT OPEN':
+        return 'Belum Dimulai';
+      default:
+        return 'Belum Dimulai';
+    }
+  }
+
+  String _mapToBackendStatus(String label) {
+    switch (label) {
+      case 'Sedang Berjalan':
+        return 'OPEN';
+      case 'Selesai':
+        return 'DONE';
+      case 'Ditunda':
+        return 'HOLD';
+      case 'Belum Dimulai':
+        return 'NOT OPEN';
+      default:
+        return 'NOT OPEN';
+    }
+  }
 
   final List<String> _statusOptions = [
     'Belum Dimulai',
@@ -141,9 +185,19 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
 
   @override
   Widget build(BuildContext context) {
-    final shortDesc = _fullDescription.length > 100
-        ? '${_fullDescription.substring(0, 100)}...'
-        : _fullDescription;
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final project = _detailModel?.data.project;
+    final collaborators = _detailModel?.data.collaborators ?? [];
+
+    final fullDescription = project?.description ?? widget.project.description;
+    final shortDesc = fullDescription.length > 100
+        ? '${fullDescription.substring(0, 100)}...'
+        : fullDescription;
 
     return Scaffold(
       backgroundColor: ColorValue.backgroundColor,
@@ -183,8 +237,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         ),
                       ),
                     ),
+                    // if (widget.owner?.idPengguna == widget.project.idPengguna)
                     GestureDetector(
-                      child: Text(
+                      child: const Text(
                         'Ubah',
                         style: TextStyle(
                           fontSize: 14,
@@ -192,69 +247,48 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                           color: ColorValue.primaryColor,
                         ),
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => EditCollaborationPage(
-                              initialData: CollaborationData(
-                                id: '1',
-                                title: 'Moneyger Application Project',
-                                description:
-                                    'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah. Aplikasi ini juga menawarkan berbagai fitur yang dapat membantu masyarakat mempermudah produktivitas mereka.',
-                                category: 'Portofolio project',
-                                status: 'Sedang Berjalan',
-                                repositoryLink:
-                                    'https://github.com/example/moneyger',
-                                url: 'https://moneyger.app',
-                                imageUrl: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80'
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditCollaborationPage(
+                                initialData: CollaborationData(
+                                  id: widget.project.id.toString(),
+                                  title: project?.title ?? widget.project.title,
+                                  description: project?.description ?? widget.project.description,
+                                  category: project?.category ?? widget.project.category ?? '',
+                                  status: _projectStatus,
+                                  repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
+                                  imageUrl: project?.projectPicture ?? widget.project.projectPicture,
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          ).then((value) {
+                            if (value == true) {
+                              Navigator.pop(context, true); // Refresh list di Home
+                            }
+                          });
+                        },
+                      ),
                   ],
                 ),
               ),
             ),
 
-            // ── Cover Image ────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80',
+                  child: (project?.projectPicture != null && project!.projectPicture.isNotEmpty)
+                  ? Image.network(
+                    project.projectPicture,
                     height: 220,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 220,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: ColorValue.primaryColor,
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 220,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.image_not_supported,
-                          color: Colors.grey, size: 48),
-                    ),
-                  ),
+                    errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
+                  )
+                  : _buildPlaceholderImage(),
                 ),
               ),
             ),
@@ -269,9 +303,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Title
-                    const Text(
-                      'Moneyger Application Project',
-                      style: TextStyle(
+                    Text(
+                      project?.title ?? widget.project.title,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: ColorValue.textPrimary,
@@ -283,9 +317,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     // Type & Date
                     Row(
                       children: [
-                        const Text(
-                          'Portofolio project',
-                          style: TextStyle(
+                        Text(
+                          project?.category ?? widget.project.category ?? 'General',
+                          style: const TextStyle(
                             fontSize: 13,
                             color: ColorValue.primaryColor,
                             fontWeight: FontWeight.w500,
@@ -367,9 +401,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         ),
                         children: [
                           TextSpan(
-                            text: _isExpanded ? _fullDescription : shortDesc,
+                            text: _isExpanded ? fullDescription : shortDesc,
                           ),
-                          if (!_isExpanded)
+                          if (!_isExpanded && fullDescription.length > 100)
                             WidgetSpan(
                               child: GestureDetector(
                                 onTap: () =>
@@ -394,10 +428,8 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: const [
-                        SkillTag(label: 'Front End'),
-                        SkillTag(label: 'Back End'),
-                        SkillTag(label: 'UI/UX'),
+                      children: [
+                        SkillTag(label: project?.category ?? widget.project.category ?? 'General'),
                       ],
                     ),
 
@@ -423,7 +455,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            '${_members.length}',
+                            '${collaborators.length}',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -449,22 +481,22 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                       (context, i) {
-                    final m = _members[i];
+                    final m = collaborators[i];
                     return Column(
                       children: [
                         MemberTile(
-                          name: m['name'],
-                          role: m['role'],
-                          imageUrl: m['imageUrl'],
-                          rating: m['rating'],
+                          name: m.namaLengkap,
+                          role: m.role,
+                          imageUrl: m.profilePicture ?? 'https://i.pravatar.cc/150?img=8',
+                          rating: 5, // Rating default karena belum ada di model
                         ),
-                        if (i < _members.length - 1)
+                        if (i < collaborators.length - 1)
                           const Divider(
                               height: 1, color: Color(0xFFEEEEEE)),
                       ],
                     );
                   },
-                  childCount: _members.length,
+                  childCount: collaborators.length,
                 ),
               ),
             ),
@@ -472,33 +504,39 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
             // ── Join Button ────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorValue.primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+            if (widget.owner?.idPengguna != widget.project.idPengguna)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: (_detailModel?.data.status == 'accepted' || _detailModel?.data.status == 'pending') 
+                          ? null 
+                          : () {
+                              // Tambahkan fungsi join di sini
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ColorValue.primaryColor,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey[300],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
                       ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Bergabung',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      child: Text(
+                        _getJoinButtonText(_detailModel?.data.status),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
@@ -517,9 +555,36 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
           ..._statusOptions.map((s) {
             final isActive = s == _projectStatus;
             return ListTile(
-              onTap: () {
+              onTap: () async {
+                if (isActive) {
+                  Navigator.pop(context);
+                  return;
+                }
+
+                // Simpan status lama untuk rollback jika gagal
+                final oldStatus = _projectStatus;
                 setState(() => _projectStatus = s);
                 Navigator.pop(context);
+
+                try {
+                  final project = _detailModel?.data.project;
+                  await _collaborationService.updateCollaboration(
+                    id: widget.project.id.toString(),
+                    title: project?.title ?? widget.project.title,
+                    description: project?.description ?? widget.project.description,
+                    category: project?.category ?? widget.project.category ?? '',
+                    status: _mapToBackendStatus(s),
+                    repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
+                  );
+                  if (mounted) {
+                    AuthUiHelper.showSuccess(context, 'Status diperbarui ke $s');
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    setState(() => _projectStatus = oldStatus);
+                    AuthUiHelper.showError(context, 'Gagal memperbarui status: $e');
+                  }
+                }
               },
               leading: Container(
                 width: 10,
@@ -558,5 +623,20 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
       default:
         return Colors.grey;
     }
+  }
+
+  String _getJoinButtonText(String? status) {
+    if (status == 'accepted') return 'Sudah Bergabung';
+    if (status == 'pending') return 'Menunggu Persetujuan';
+    return 'Bergabung';
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      height: 220,
+      width: double.infinity,
+      color: Colors.grey[300],
+      child: const Icon(Icons.image, size: 50, color: Colors.grey),
+    );
   }
 }

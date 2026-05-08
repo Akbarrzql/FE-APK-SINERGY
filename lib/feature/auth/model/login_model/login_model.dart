@@ -38,15 +38,15 @@ class Data {
   String token;
   int expiredAt;
   String namaLengkap;
-  String profilePicture;
-  String institusi;
-  String bio;
+  String? profilePicture;
+  String? institusi;
+  String? bio;
   List<String> keahlian;
-  String lokasi;
-  String whatsapp;
-  String instagram;
-  String facebook;
-  String linkedin;
+  String? lokasi;
+  String? whatsapp;
+  String? instagram;
+  String? facebook;
+  String? linkedin;
 
   Data({
     required this.userId,
@@ -54,27 +54,29 @@ class Data {
     required this.token,
     required this.expiredAt,
     required this.namaLengkap,
-    required this.profilePicture,
-    required this.institusi,
-    required this.bio,
+    this.profilePicture,
+    this.institusi,
+    this.bio,
     required this.keahlian,
-    required this.lokasi,
-    required this.whatsapp,
-    required this.instagram,
-    required this.facebook,
-    required this.linkedin,
+    this.lokasi,
+    this.whatsapp,
+    this.instagram,
+    this.facebook,
+    this.linkedin,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    userId: json["userId"],
-    email: json["email"],
-    token: json["token"],
-    expiredAt: json["expiredAt"],
-    namaLengkap: json["namaLengkap"],
+    userId: json["userId"] ?? 0,
+    email: json["email"] ?? '',
+    token: json["token"] ?? '',
+    expiredAt: json["expiredAt"] ?? 0,
+    namaLengkap: json["namaLengkap"] ?? '',
     profilePicture: json["profilePicture"],
     institusi: json["institusi"],
     bio: json["bio"],
-    keahlian: List<String>.from(json["keahlian"].map((x) => x)),
+    keahlian: json["keahlian"] == null
+        ? []
+        : List<String>.from(json["keahlian"].map((x) => x.toString())),
     lokasi: json["lokasi"],
     whatsapp: json["whatsapp"],
     instagram: json["instagram"],

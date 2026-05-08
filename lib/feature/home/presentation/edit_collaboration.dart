@@ -13,7 +13,6 @@ class CollaborationData {
   final String category;
   final String status;
   final String repositoryLink;
-  final String url;
   final String? imageUrl;
 
   const CollaborationData({
@@ -23,7 +22,6 @@ class CollaborationData {
     required this.category,
     required this.status,
     required this.repositoryLink,
-    required this.url,
     this.imageUrl,
   });
 }
@@ -43,7 +41,6 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   late final TextEditingController _descController;
   late final TextEditingController _categoryController;
   late final TextEditingController _repoController;
-  late final TextEditingController _urlController;
 
   late String _selectedStatus;
   String? _newImagePath; // path lokal jika user ganti gambar
@@ -64,7 +61,6 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     category: 'Portofolio project',
     status: 'Sedang Berjalan',
     repositoryLink: 'https://github.com/example/moneyger',
-    url: 'https://moneyger.app',
     imageUrl:
     'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80',
   );
@@ -77,9 +73,26 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     _descController = TextEditingController(text: data.description);
     _categoryController = TextEditingController(text: data.category);
     _repoController = TextEditingController(text: data.repositoryLink);
-    _urlController = TextEditingController(text: data.url);
-    _selectedStatus = data.status;
+    _selectedStatus = _mapBackendStatus(data.status);
     _existingImageUrl = data.imageUrl;
+  }
+
+  String _mapBackendStatus(String? status) {
+    if (status == null) return 'Belum Dimulai';
+    if (_statusOptions.contains(status)) return status;
+
+    switch (status.toUpperCase()) {
+      case 'OPEN':
+        return 'Sedang Berjalan';
+      case 'DONE':
+        return 'Selesai';
+      case 'HOLD':
+        return 'Ditunda';
+      case 'NOT OPEN':
+        return 'Belum Dimulai';
+      default:
+        return 'Belum Dimulai';
+    }
   }
 
   @override
@@ -88,7 +101,6 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     _descController.dispose();
     _categoryController.dispose();
     _repoController.dispose();
-    _urlController.dispose();
     super.dispose();
   }
 
@@ -119,9 +131,8 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         category: _categoryController.text.trim(),
-        status: _selectedStatus,
+        status: _mapToBackendStatus(_selectedStatus),
         repositoryLink: _repoController.text.trim(),
-        url: _urlController.text.trim(),
         imagePath: _newImagePath,
       );
 
@@ -133,6 +144,21 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
       if (!mounted) return;
       Navigator.of(context).pop();
       AuthUiHelper.showError(context, AuthUiHelper.readableError(e));
+    }
+  }
+
+  String _mapToBackendStatus(String label) {
+    switch (label) {
+      case 'Sedang Berjalan':
+        return 'OPEN';
+      case 'Selesai':
+        return 'DONE';
+      case 'Ditunda':
+        return 'HOLD';
+      case 'Belum Dimulai':
+        return 'NOT OPEN';
+      default:
+        return 'NOT OPEN';
     }
   }
 
@@ -368,21 +394,6 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                         prefixIcon: Icons.code_rounded,
                         validator: (v) => (v == null || v.isEmpty)
                             ? 'Link repository wajib diisi'
-                            : null,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // URL
-                      _buildLabel('URL Project'),
-                      const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _urlController,
-                        hint: 'https://...',
-                        keyboardType: TextInputType.url,
-                        prefixIcon: Icons.link_rounded,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'URL wajib diisi'
                             : null,
                       ),
 

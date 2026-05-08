@@ -50,6 +50,10 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    // Mapping UI status to Backend status if needed
+    String backendStatus = "OPEN";
+    if (_selectedStatus == 'Selesai') backendStatus = "CLOSED";
+
     // show loading
     showDialog(
       context: context,
@@ -58,24 +62,23 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
     );
 
     try {
-      await CollaborationService().createCollaboration(
+      await CollaborationService().createProject(
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         category: _categoryController.text.trim(),
-        status: _selectedStatus,
+        status: backendStatus,
         repositoryLink: _repoController.text.trim(),
-        url: _urlController.text.trim(),
         imagePath: _imagePath,
       );
 
       if (!mounted) return;
       Navigator.of(context).pop(); // remove loading
-      AuthUiHelper.showSuccess(context, 'Kolaborasi berhasil dibuat.');
+      AuthUiHelper.showSuccess(context, 'Proyek berhasil dibuat.');
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop(); // remove loading
-      AuthUiHelper.showError(context, AuthUiHelper.readableError(e));
+      AuthUiHelper.showError(context, e.toString());
     }
   }
 
@@ -103,7 +106,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Buat Kolaborasi',
+                          'Buat Proyek',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -144,11 +147,11 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                             Icon(Icons.add_photo_alternate_outlined,
                                 size: 48, color: Colors.grey[400]),
                             const SizedBox(height: 8),
-                            Text(
-                              'Tambah Gambar Cover',
+                            const Text(
+                              'Tambah Gambar Proyek',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey[500],
+                                color: Colors.grey,
                               ),
                             ),
                           ],
@@ -169,11 +172,11 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Judul
-                      _buildLabel('Judul'),
+                      _buildLabel('Judul Proyek'),
                       const SizedBox(height: 6),
                       _buildTextField(
                         controller: _titleController,
-                        hint: 'Judul Kolaborasi',
+                        hint: 'Masukkan Judul',
                         validator: (v) =>
                         (v == null || v.isEmpty) ? 'Judul wajib diisi' : null,
                         isBorderless: true,
@@ -200,13 +203,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       // Kategori
                       _buildLabel('Kategori'),
                       const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _categoryController,
-                        hint: 'Tambahkan Kategori',
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Kategori wajib diisi'
-                            : null,
-                      ),
+                      _buildCategoryInput(),
 
                       const SizedBox(height: 16),
 
@@ -229,20 +226,6 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                         (v == null || v.isEmpty) ? 'Link repository wajib diisi' : null,
                       ),
 
-                      const SizedBox(height: 16),
-
-                      // URL
-                      _buildLabel('URL Project'),
-                      const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _urlController,
-                        hint: 'https://...',
-                        keyboardType: TextInputType.url,
-                        prefixIcon: Icons.link_rounded,
-                        validator: (v) =>
-                        (v == null || v.isEmpty) ? 'URL wajib diisi' : null,
-                      ),
-
                       const SizedBox(height: 32),
 
                       // Submit button
@@ -250,7 +233,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: (){},
+                          onPressed: _submit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ColorValue.primaryColor,
                             foregroundColor: Colors.white,
@@ -260,7 +243,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                             elevation: 0,
                           ),
                           child: const Text(
-                            'Buat Kolaborasi',
+                            'Simpan Proyek',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -356,6 +339,84 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
           const BorderSide(color: ColorValue.primaryColor, width: 1.5),
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryInput() {
+    final List<String> categories = [
+      'Web Development',
+      'UI/UX Design',
+      'Mobile Dev',
+      'Back End',
+      'Data Science',
+      'Data Analyst',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _categoryController,
+          validator: (v) =>
+              (v == null || v.isEmpty) ? 'Kategori wajib diisi' : null,
+          style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Pilih atau ketik kategori',
+            hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: ColorValue.primaryColor, width: 1.5),
+            ),
+          ),
+          onChanged: (value) {
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 0,
+          children: categories.map((cat) {
+            final isSelected = _categoryController.text == cat;
+            return ChoiceChip(
+              label: Text(cat),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  _categoryController.text = cat;
+                });
+              },
+              selectedColor: ColorValue.primaryColor.withOpacity(0.1),
+              backgroundColor: Colors.white,
+              labelStyle: TextStyle(
+                fontSize: 12,
+                color: isSelected ? ColorValue.primaryColor : Colors.grey[600],
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected ? ColorValue.primaryColor : Colors.grey[300]!,
+                ),
+              ),
+              showCheckmark: false,
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 

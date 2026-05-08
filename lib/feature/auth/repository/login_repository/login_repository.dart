@@ -160,12 +160,7 @@ class LoginRepositoryImpl implements LoginRepository {
       final googleUid = userData['google_uid']?.toString() ?? '';
       final hasLocalPassword = userData['has_local_password'] as bool? ?? false;
 
-      // 🔑 Priority:
-      // 1. Jika sudah ada local password, gunakan googleSecret (untuk fallback ke Google login)
-      // 2. Jika pure Google provider, gunakan derived secret
       if (hasLocalPassword && googleUid.isNotEmpty) {
-        // User sudah set password lokal pada Google account
-        // Return googleSecret sebagai fallback untuk Google re-login
         return FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
       }
 
@@ -175,8 +170,9 @@ class LoginRepositoryImpl implements LoginRepository {
       return null;
     } catch (e) {
       if (kDebugMode) {
-        print('Login fallback error: $e');
+        print('Firestore fallback error (likely permission denied): $e');
       }
+      // Jangan throw error di sini agar login backend utama tetap bisa berhasil
       return null;
     }
   }

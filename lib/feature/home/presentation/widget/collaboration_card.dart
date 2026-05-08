@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../core/common/color_value.dart';
+import '../../../collaboration/presentation/collaboration_profile_screen.dart';
 import 'member_avatar_stack.dart';
 import 'skill_tag.dart';
 
 class CollaborationCard extends StatelessWidget {
+  final int id;
   final String ownerName;
   final String ownerRole;
   final String ownerImageUrl;
@@ -19,6 +21,7 @@ class CollaborationCard extends StatelessWidget {
 
   const CollaborationCard({
     super.key,
+    required this.id,
     required this.ownerName,
     required this.ownerRole,
     required this.ownerImageUrl,
@@ -85,11 +88,7 @@ class CollaborationCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Member avatars
-                MemberAvatarStack(
-                  images: memberImages,
-                  extra: extraMembers,
-                ),
+                MemberAvatarsWidget(projectId: id)
               ],
             ),
 

@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import '../../home/model/view_project_model.dart';
+
 CollaborationProfileModel collaborationProfileModelFromJson(String str) => CollaborationProfileModel.fromJson(json.decode(str));
 
 String collaborationProfileModelToJson(CollaborationProfileModel data) => json.encode(data.toJson());
@@ -60,6 +62,7 @@ class OwnedProject {
   String? status;
   String? repositoryLink;
   String? projectPicture;
+  List<CollaboratorShort>? collaborators;
 
   OwnedProject({
     this.id,
@@ -69,6 +72,7 @@ class OwnedProject {
     this.status,
     this.repositoryLink,
     this.projectPicture,
+    this.collaborators,
   });
 
   factory OwnedProject.fromJson(Map<String, dynamic> json) => OwnedProject(
@@ -79,6 +83,7 @@ class OwnedProject {
     status: json["status"],
     repositoryLink: json["repositoryLink"],
     projectPicture: json["projectPicture"],
+    collaborators: json["collaborators"] == null ? [] : List<CollaboratorShort>.from(json["collaborators"]!.map((x) => CollaboratorShort.fromJson(x))),
   );
 
   Map<String, dynamic> toJson() => {
@@ -89,5 +94,6 @@ class OwnedProject {
     "status": status,
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
+    "collaborators": collaborators == null ? [] : List<dynamic>.from(collaborators!.map((x) => x.toJson())),
   };
 }

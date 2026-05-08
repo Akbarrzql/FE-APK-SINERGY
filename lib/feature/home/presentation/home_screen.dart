@@ -387,21 +387,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   delegate: SliverChildBuilderDelegate(
                         (context, i) {
                       final item = _filteredProjects[i];
+                      
+                      // Extract collaborator images
+                      final List<String> memberImages = item.collaborators
+                          ?.where((c) => c.profilePicture != null && c.profilePicture!.isNotEmpty)
+                          .map((c) => c.profilePicture!)
+                          .toList() ?? [];
+
+                      // Limit to show only a few in the stack, rest as +N
+                      const int maxDisplay = 3;
+                      final List<String> displayImages = memberImages.take(maxDisplay).toList();
+                      final int extraMembers = memberImages.length > maxDisplay ? memberImages.length - maxDisplay : 0;
+
                       return CollaborationCard(
+                        id: item.id,
                         ownerName: item.owner.fullName,
                         ownerRole: 'Pemilik Proyek',
                         ownerImageUrl: (item.owner.profilePicture != null && item.owner.profilePicture.toString().isNotEmpty)
                             ? item.owner.profilePicture.toString()
                             : 'https://ui-avatars.com/api/?name=${item.owner.fullName}&background=random',
-                        memberImages: [],
-                        extraMembers: 0,
+                        memberImages: displayImages,
+                        extraMembers: extraMembers,
                         projectTitle: item.title,
                         projectType: item.category ?? 'General',
                         projectDate: '-',
-                        // Backend doesn't provide date yet
                         projectDescription: item.description,
-                        skills: [],
-                        // Backend doesn't provide skills list yet
+                        skills: [
+                          item.category ?? 'General',
+                        ],
                         onTap: () async {
                           final result = await Navigator.push(
                             context,

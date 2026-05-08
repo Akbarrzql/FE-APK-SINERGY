@@ -39,6 +39,7 @@ class Datum {
   String? repositoryLink;
   String? projectPicture;
   Owner owner;
+  List<CollaboratorShort>? collaborators;
 
   Datum({
     required this.id,
@@ -49,6 +50,7 @@ class Datum {
     this.repositoryLink,
     this.projectPicture,
     required this.owner,
+    this.collaborators,
   });
 
   factory Datum.fromJson(Map<String, dynamic> json) {
@@ -63,6 +65,9 @@ class Datum {
       owner: json["owner"] != null && json["owner"] is Map<String, dynamic>
           ? Owner.fromJson(json["owner"])
           : Owner(id: 0, fullName: 'Unknown', email: '', profilePicture: null),
+      collaborators: json["collaborators"] != null && json["collaborators"] is List
+          ? List<CollaboratorShort>.from((json["collaborators"] as List).map((x) => CollaboratorShort.fromJson(x)))
+          : [],
     );
   }
 
@@ -75,6 +80,27 @@ class Datum {
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
     "owner": owner.toJson(),
+    "collaborators": collaborators == null ? [] : List<dynamic>.from(collaborators!.map((x) => x.toJson())),
+  };
+}
+
+class CollaboratorShort {
+  int id;
+  String? profilePicture;
+
+  CollaboratorShort({
+    required this.id,
+    this.profilePicture,
+  });
+
+  factory CollaboratorShort.fromJson(Map<String, dynamic> json) => CollaboratorShort(
+    id: json["id"] is int ? json["id"] : int.tryParse(json["id"]?.toString() ?? '0') ?? 0,
+    profilePicture: json["profilePicture"]?.toString(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "profilePicture": profilePicture,
   };
 }
 

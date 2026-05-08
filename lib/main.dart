@@ -5,14 +5,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gabungyuk/core/common/app_navigator.dart';
 import 'package:gabungyuk/feature/splash_screen/splash_screen.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/reset_password_in_app_screen.dart';
+import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await GoogleSignIn.instance.initialize();
   runApp(const MyApp());
 }
@@ -36,7 +35,9 @@ class _MyAppState extends State<MyApp> {
     final code = link.queryParameters['oobCode'];
     if (code != null && appNavigatorKey.currentState != null) {
       appNavigatorKey.currentState!.push(
-        MaterialPageRoute(builder: (_) => ResetPasswordInAppScreen(oobCode: code)),
+        MaterialPageRoute(
+          builder: (_) => ResetPasswordInAppScreen(oobCode: code),
+        ),
       );
     }
   }
@@ -44,18 +45,21 @@ class _MyAppState extends State<MyApp> {
   Future<void> _initDynamicLinks() async {
     // Handle initial link
     try {
-      final PendingDynamicLinkData? data = await FirebaseDynamicLinks.instance.getInitialLink();
+      final PendingDynamicLinkData? data = await FirebaseDynamicLinks.instance
+          .getInitialLink();
       _handleLink(data?.link);
     } catch (e) {
       // ignore
     }
 
     // Listen for subsequent links
-    FirebaseDynamicLinks.instance.onLink.listen((dynamicLinkData) {
-      _handleLink(dynamicLinkData.link);
-    }).onError((e) {
-      // ignore errors
-    });
+    FirebaseDynamicLinks.instance.onLink
+        .listen((dynamicLinkData) {
+          _handleLink(dynamicLinkData.link);
+        })
+        .onError((e) {
+          // ignore errors
+        });
   }
 
   @override

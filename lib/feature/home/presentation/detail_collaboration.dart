@@ -1,10 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:gabungyuk/feature/home/model/detail_project_model.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
+import 'package:gabungyuk/feature/home/model/view_collaboration_model.dart' as collab_model;
+import 'package:gabungyuk/feature/home/model/pending_collaboration_model.dart' as pending_model;
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
 import 'edit_collaboration.dart';
@@ -15,6 +21,10 @@ class MemberTile extends StatelessWidget {
   final String role;
   final String imageUrl;
   final int rating;
+  final String? status;
+  final bool isOwner;
+  final VoidCallback? onAccept;
+  final VoidCallback? onReject;
 
   const MemberTile({
     super.key,
@@ -22,10 +32,16 @@ class MemberTile extends StatelessWidget {
     required this.role,
     required this.imageUrl,
     required this.rating,
+    this.status,
+    this.isOwner = false,
+    this.onAccept,
+    this.onReject,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool isPending = status?.toUpperCase() == 'PENDING';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -50,12 +66,15 @@ class MemberTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: ColorValue.textPrimary,
+                    Flexible(
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: ColorValue.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -82,11 +101,75 @@ class MemberTile extends StatelessWidget {
                     fontSize: 13,
                     color: ColorValue.textSecondary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+
+          if (isOwner && isPending) ...[
+            const SizedBox(width: 8),
+            _ActionButton(
+              icon: Icons.check,
+              color: Colors.green,
+              onTap: onAccept,
+            ),
+            const SizedBox(width: 8),
+            _ActionButton(
+              icon: Icons.close,
+              color: Colors.red,
+              onTap: onReject,
+            ),
+          ] else if (isPending) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Pending',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange,
+                ),
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: color,
+          size: 20,
+        ),
       ),
     );
   }
@@ -111,6 +194,8 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
   final CollaborationService _collaborationService = CollaborationService();
   bool _isLoading = true;
   DetailProjectModel? _detailModel;
+  collab_model.ViewCollaborationModel? _collaborationModel;
+  pending_model.PendingCollaborationModel? _pendingModel;
   bool _isExpanded = false;
   late String _projectStatus;
 
@@ -124,9 +209,23 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
   Future<void> _fetchProjectDetail() async {
     try {
       final detail = await _collaborationService.getProjectDetail(widget.project.id);
+      
+      collab_model.ViewCollaborationModel? collab;
+      pending_model.PendingCollaborationModel? pending;
+
+      final isOwner = widget.owner?.idPengguna == widget.project.owner.id;
+
+      if (!isOwner) {
+        collab = await _collaborationService.checkJoinStatus(widget.project.id);
+      } else {
+        pending = await _collaborationService.getPendingRequests(widget.project.id);
+      }
+
       if (mounted) {
         setState(() {
           _detailModel = detail;
+          _collaborationModel = collab;
+          _pendingModel = pending;
           _isLoading = false;
           if (detail.data.project.status.isNotEmpty) {
             _projectStatus = _mapBackendStatus(detail.data.project.status);
@@ -192,7 +291,13 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     }
 
     final project = _detailModel?.data.project;
-    final collaborators = _detailModel?.data.collaborators ?? [];
+    final allCollaborators = _detailModel?.data.collaborators ?? [];
+    final isProjectOwner = widget.owner?.idPengguna == widget.project.owner.id;
+
+    // Filter members for clarity
+    final acceptedMembers = allCollaborators.where((m) => m.requestStatus.toUpperCase() == 'ACCEPTED').toList();
+    // For owner view, separate requests from team. For others, show everyone with status badges.
+    final displayMembers = isProjectOwner ? acceptedMembers : allCollaborators;
 
     final fullDescription = project?.description ?? widget.project.description;
     final shortDesc = fullDescription.length > 100
@@ -237,16 +342,16 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         ),
                       ),
                     ),
-                    // if (widget.owner?.idPengguna == widget.project.idPengguna)
-                    GestureDetector(
-                      child: const Text(
-                        'Ubah',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: ColorValue.primaryColor,
+                    if (widget.owner?.idPengguna == widget.project.owner.id)
+                      GestureDetector(
+                        child: const Text(
+                          'Ubah',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: ColorValue.primaryColor,
+                          ),
                         ),
-                      ),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -348,7 +453,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     const SizedBox(height: 16),
 
                     GestureDetector(
-                      onTap: () => _showStatusPicker(context),
+                      onTap: (widget.owner?.idPengguna == widget.project.owner.id)
+                          ? () => _showStatusPicker(context)
+                          : null,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
@@ -378,12 +485,14 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                                 color: _statusColor(_projectStatus),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 16,
-                              color: _statusColor(_projectStatus),
-                            ),
+                            if (widget.owner?.idPengguna == widget.project.owner.id) ...[
+                              const SizedBox(width: 6),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 16,
+                                color: _statusColor(_projectStatus),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -432,79 +541,153 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         SkillTag(label: project?.category ?? widget.project.category ?? 'General'),
                       ],
                     ),
-
-                    const SizedBox(height: 28),
-
-                    // ── Team Members Section ─────────────────────────────
-                    Row(
-                      children: [
-                        const Text(
-                          'Anggota team',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: ColorValue.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: ColorValue.tagBackground,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${collaborators.length}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: ColorValue.primaryColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Divider
-                    const Divider(height: 1, color: Color(0xFFEEEEEE)),
                   ],
                 ),
               ),
             ),
 
-            // ── Member List ────────────────────────────────────────────────
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+
+            // ── Team Members Section ───────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Anggota team',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: ColorValue.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ColorValue.tagBackground,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${acceptedMembers.length}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: ColorValue.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Accepted Members List ─────────────────────────────────────
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                       (context, i) {
-                    final m = collaborators[i];
+                    final m = displayMembers[i];
                     return Column(
                       children: [
                         MemberTile(
                           name: m.namaLengkap,
-                          role: m.role,
-                          imageUrl: m.profilePicture ?? 'https://i.pravatar.cc/150?img=8',
-                          rating: 5, // Rating default karena belum ada di model
+                          role: m.keahlian, // Tampilkan keahlian user
+                          imageUrl: m.profilePicture ?? '',
+                          rating: 5,
+                          status: m.requestStatus,
+                          isOwner: isProjectOwner,
+                          onAccept: () => _handleCollaborationAction(m.idPengguna, 'ACCEPT'),
+                          onReject: () => _handleCollaborationAction(m.idPengguna, 'REJECT'),
                         ),
-                        if (i < collaborators.length - 1)
+                        if (i < displayMembers.length - 1)
                           const Divider(
                               height: 1, color: Color(0xFFEEEEEE)),
                       ],
                     );
                   },
-                  childCount: collaborators.length,
+                  childCount: displayMembers.length,
                 ),
               ),
             ),
 
+            // ── Pending Requests (Only for Owner) ──────────────────────────
+            if (isProjectOwner && (_pendingModel?.data?.collaborators?.isNotEmpty ?? false)) ...[
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Permintaan bergabung',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: ColorValue.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: ColorValue.orangeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_pendingModel?.data?.collaborators?.length ?? 0}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: ColorValue.orangeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) {
+                      final m = _pendingModel!.data!.collaborators![i];
+                      return Column(
+                        children: [
+                          MemberTile(
+                            name: m.namaLengkap ?? '',
+                            role: m.keahlian ?? 'Anggota', // Tampilkan keahlian user
+                            imageUrl: m.profilePicture ?? '',
+                            rating: 5,
+                            status: 'PENDING',
+                            isOwner: true,
+                            onAccept: () => _handleCollaborationAction(m.idPengguna!, 'ACCEPT'),
+                            onReject: () => _handleCollaborationAction(m.idPengguna!, 'REJECT'),
+                          ),
+                          if (i < (_pendingModel?.data?.collaborators?.length ?? 0) - 1)
+                            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                        ],
+                      );
+                    },
+                    childCount: _pendingModel?.data?.collaborators?.length ?? 0,
+                  ),
+                ),
+              ),
+            ],
+
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
             // ── Join Button ────────────────────────────────────────────────
-            if (widget.owner?.idPengguna != widget.project.idPengguna)
+            if (widget.owner?.idPengguna != widget.project.owner.id)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -512,10 +695,23 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: (_detailModel?.data.status == 'accepted' || _detailModel?.data.status == 'pending') 
+                      onPressed: (_collaborationModel?.data?.status?.toUpperCase() == 'ACCEPTED' || 
+                                  _collaborationModel?.data?.status?.toUpperCase() == 'PENDING') 
                           ? null 
-                          : () {
-                              // Tambahkan fungsi join di sini
+                          : () async {
+                              try {
+                                setState(() => _isLoading = true);
+                                await _collaborationService.requestJoin(widget.project.id);
+                                if (mounted) {
+                                  AuthUiHelper.showSuccess(context, 'Berhasil mengirim permintaan bergabung');
+                                  _fetchProjectDetail();
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  AuthUiHelper.showError(context, 'Terjadi kesalahan: $e');
+                                  setState(() => _isLoading = false);
+                                }
+                              }
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ColorValue.primaryColor,
@@ -527,7 +723,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         elevation: 0,
                       ),
                       child: Text(
-                        _getJoinButtonText(_detailModel?.data.status),
+                        _getJoinButtonText(_collaborationModel?.data?.status),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -543,6 +739,26 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleCollaborationAction(int userId, String action) async {
+    try {
+      setState(() => _isLoading = true);
+      await _collaborationService.collaborationAction(
+        projectId: widget.project.id,
+        userId: userId,
+        action: action,
+      );
+      if (mounted) {
+        AuthUiHelper.showSuccess(context, 'Berhasil ${action == 'ACCEPT' ? 'menerima' : 'menolak'} permintaan.');
+        _fetchProjectDetail();
+      }
+    } catch (e) {
+      if (mounted) {
+        AuthUiHelper.showError(context, 'Gagal memproses aksi: $e');
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _showStatusPicker(BuildContext context) {
@@ -626,8 +842,10 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
   }
 
   String _getJoinButtonText(String? status) {
-    if (status == 'accepted') return 'Sudah Bergabung';
-    if (status == 'pending') return 'Menunggu Persetujuan';
+    if (status == null) return 'Bergabung';
+    final s = status.toUpperCase();
+    if (s == 'ACCEPTED') return 'Sudah Bergabung';
+    if (s == 'PENDING') return 'Menunggu Persetujuan';
     return 'Bergabung';
   }
 

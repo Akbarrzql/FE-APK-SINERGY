@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final viewProjectModel = viewProjectModelFromJson(jsonString);
-
 import 'dart:convert';
 
 ViewProjectModel viewProjectModelFromJson(String str) => ViewProjectModel.fromJson(json.decode(str));
@@ -20,9 +16,11 @@ class ViewProjectModel {
   });
 
   factory ViewProjectModel.fromJson(Map<String, dynamic> json) => ViewProjectModel(
-    status: json["status"],
-    message: json["message"],
-    data: List<Datum>.from(json["data"].map((x) => Datum.fromJson(x))),
+    status: json["status"] is int ? json["status"] : int.tryParse(json["status"]?.toString() ?? '0') ?? 0,
+    message: json["message"]?.toString() ?? '',
+    data: json["data"] != null && json["data"] is List
+        ? List<Datum>.from((json["data"] as List).map((x) => Datum.fromJson(x)))
+        : [],
   );
 
   Map<String, dynamic> toJson() => {
@@ -34,44 +32,76 @@ class ViewProjectModel {
 
 class Datum {
   int id;
-  int? idPengguna;
   String title;
   String description;
   String? category;
   String? status;
   String? repositoryLink;
   String? projectPicture;
+  Owner owner;
 
   Datum({
     required this.id,
-    this.idPengguna,
     required this.title,
     required this.description,
-    required this.category,
-    required this.status,
-    required this.repositoryLink,
-    required this.projectPicture,
+    this.category,
+    this.status,
+    this.repositoryLink,
+    this.projectPicture,
+    required this.owner,
   });
 
-  factory Datum.fromJson(Map<String, dynamic> json) => Datum(
-    id: json["id"],
-    idPengguna: json["idPengguna"],
-    title: json["title"],
-    description: json["description"],
-    category: json["category"],
-    status: json["status"],
-    repositoryLink: json["repositoryLink"],
-    projectPicture: json["projectPicture"],
-  );
+  factory Datum.fromJson(Map<String, dynamic> json) {
+    return Datum(
+      id: json["id"] is int ? json["id"] : int.tryParse(json["id"]?.toString() ?? '0') ?? 0,
+      title: json["title"]?.toString() ?? '',
+      description: json["description"]?.toString() ?? '',
+      category: json["category"]?.toString(),
+      status: json["status"]?.toString(),
+      repositoryLink: json["repositoryLink"]?.toString(),
+      projectPicture: json["projectPicture"]?.toString(),
+      owner: json["owner"] != null && json["owner"] is Map<String, dynamic>
+          ? Owner.fromJson(json["owner"])
+          : Owner(id: 0, fullName: 'Unknown', email: '', profilePicture: null),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     "id": id,
-    "idPengguna": idPengguna,
     "title": title,
     "description": description,
     "category": category,
     "status": status,
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
+    "owner": owner.toJson(),
+  };
+}
+
+class Owner {
+  int id;
+  String fullName;
+  String email;
+  String? profilePicture;
+
+  Owner({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    this.profilePicture,
+  });
+
+  factory Owner.fromJson(Map<String, dynamic> json) => Owner(
+    id: json["id"] is int ? json["id"] : int.tryParse(json["id"]?.toString() ?? '0') ?? 0,
+    fullName: json["fullName"]?.toString() ?? 'Unknown',
+    email: json["email"]?.toString() ?? '',
+    profilePicture: json["profilePicture"]?.toString(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "fullName": fullName,
+    "email": email,
+    "profilePicture": profilePicture,
   };
 }

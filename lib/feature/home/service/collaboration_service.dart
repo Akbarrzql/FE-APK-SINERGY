@@ -7,6 +7,9 @@ import 'package:gabungyuk/core/common/api_exception.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/home/model/detail_project_model.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
+import 'package:gabungyuk/feature/home/model/request_collaboration_model.dart';
+import 'package:gabungyuk/feature/home/model/view_collaboration_model.dart';
+import 'package:gabungyuk/feature/home/model/pending_collaboration_model.dart';
 import 'package:http/http.dart' as http;
 
 class CollaborationService {
@@ -145,6 +148,32 @@ class CollaborationService {
     }
   }
 
+  Future<List<Datum>> getAllProjects() async {
+    final token = await _sharedCode.getAuthToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/projects');
+
+    _logRequest('GET', url.toString(), null);
+    final response = await http.get(
+      url,
+      headers: {
+        HttpHeaders.authorizationHeader: 'Bearer $token',
+      },
+    );
+    _logResponse(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final projectModel = viewProjectModelFromJson(response.body);
+      return projectModel.data;
+    } else {
+      String message = 'Gagal mengambil data proyek.';
+      try {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        message = json['message'] ?? json['msg'] ?? message;
+      } catch (_) {}
+      throw ApiException(message, response.statusCode);
+    }
+  }
+
   Future<List<Datum>> getMyProjects() async {
     final token = await _sharedCode.getAuthToken();
     final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/users/projects');
@@ -189,6 +218,113 @@ class CollaborationService {
       return detailProjectModelFromJson(response.body);
     } else {
       String message = 'Gagal mengambil detail proyek.';
+      try {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        message = json['message'] ?? json['msg'] ?? message;
+      } catch (_) {}
+      throw ApiException(message, response.statusCode);
+    }
+  }
+
+  Future<ViewCollaborationModel?> checkJoinStatus(int projectId) async {
+    final token = await _sharedCode.getAuthToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/collaboration/$projectId');
+
+    _logRequest('GET', url.toString(), null);
+    final response = await http.get(
+      url,
+      headers: {
+        HttpHeaders.authorizationHeader: 'Bearer $token',
+      },
+    );
+    _logResponse(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return viewCollaborationModelFromJson(response.body);
+    } else if (response.statusCode == 404) {
+      return null; // Not requested yet
+    } else {
+      return null;
+    }
+  }
+
+  Future<RequestCollaborationModel> requestJoin(int projectId) async {
+    final token = await _sharedCode.getAuthToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/collaboration/request/$projectId');
+
+    _logRequest('POST', url.toString(), null);
+    final response = await http.post(
+      url,
+      headers: {
+        HttpHeaders.authorizationHeader: 'Bearer $token',
+      },
+    );
+    _logResponse(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return requestCollaborationModelFromJson(response.body);
+    } else {
+      String message = 'Gagal mengirim permintaan bergabung.';
+      try {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        message = json['message'] ?? json['msg'] ?? message;
+      } catch (_) {}
+      throw ApiException(message, response.statusCode);
+    }
+  }
+
+  Future<PendingCollaborationModel> getPendingRequests(int projectId) async {
+    final token = await _sharedCode.getAuthToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/collaboration/project/$projectId/pending');
+
+    _logRequest('GET', url.toString(), null);
+    final response = await http.get(
+      url,
+      headers: {
+        HttpHeaders.authorizationHeader: 'Bearer $token',
+      },
+    );
+    _logResponse(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return pendingCollaborationModelFromJson(response.body);
+    } else {
+      String message = 'Gagal mengambil permintaan tertunda.';
+      try {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        message = json['message'] ?? json['msg'] ?? message;
+      } catch (_) {}
+      throw ApiException(message, response.statusCode);
+    }
+  }
+
+  Future<void> collaborationAction({
+    required int projectId,
+    required int userId,
+    required String action,
+  }) async {
+    final token = await _sharedCode.getAuthToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/collaboration/action');
+
+    final body = {
+      "projectId": projectId,
+      "userId": userId,
+      "action": action.toUpperCase(),
+    };
+
+    _logRequest('POST', url.toString(), body);
+    final response = await http.post(
+      url,
+      headers: {
+        HttpHeaders.authorizationHeader: 'Bearer $token',
+        HttpHeaders.contentTypeHeader: 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+    _logResponse(response);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      String message = 'Gagal memproses aksi kolaborasi.';
       try {
         final Map<String, dynamic> json = jsonDecode(response.body);
         message = json['message'] ?? json['msg'] ?? message;

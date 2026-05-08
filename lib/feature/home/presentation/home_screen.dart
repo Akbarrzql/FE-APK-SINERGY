@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchProjects() async {
     try {
-      final projects = await _collaborationService.getMyProjects();
+      final projects = await _collaborationService.getAllProjects();
       if (mounted) {
         setState(() {
           _projects = projects;
@@ -438,10 +438,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         (context, i) {
                       final item = _filteredProjects[i];
                       return CollaborationCard(
-                        ownerName: _profile?.namaLengkap ?? 'User',
+                        ownerName: item.owner.fullName,
                         ownerRole: 'Pemilik Proyek',
-                        ownerImageUrl: _profile?.profilePicture ??
-                            'https://i.pravatar.cc/150?img=8',
+                        ownerImageUrl: (item.owner.profilePicture != null && item.owner.profilePicture.toString().isNotEmpty)
+                            ? item.owner.profilePicture.toString()
+                            : 'https://ui-avatars.com/api/?name=${item.owner.fullName}&background=random',
                         memberImages: [],
                         extraMembers: 0,
                         projectTitle: item.title,

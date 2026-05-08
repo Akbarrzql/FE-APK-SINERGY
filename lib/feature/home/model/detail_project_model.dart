@@ -20,9 +20,9 @@ class DetailProjectModel {
   });
 
   factory DetailProjectModel.fromJson(Map<String, dynamic> json) => DetailProjectModel(
-    status: json["status"],
-    message: json["message"],
-    data: Data.fromJson(json["data"]),
+    status: json["status"] is int ? json["status"] : int.tryParse(json["status"]?.toString() ?? '0') ?? 0,
+    message: json["message"]?.toString() ?? '',
+    data: Data.fromJson(json["data"] ?? {}),
   );
 
   Map<String, dynamic> toJson() => {
@@ -44,9 +44,11 @@ class Data {
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    status: json["status"],
-    project: Project.fromJson(json["project"]),
-    collaborators: List<Collaborator>.from(json["collaborators"].map((x) => Collaborator.fromJson(x))),
+    status: json["status"]?.toString() ?? '',
+    project: Project.fromJson(json["project"] ?? {}),
+    collaborators: json["collaborators"] != null && json["collaborators"] is List
+        ? List<Collaborator>.from((json["collaborators"] as List).map((x) => Collaborator.fromJson(x)))
+        : [],
   );
 
   Map<String, dynamic> toJson() => {
@@ -61,58 +63,58 @@ class Collaborator {
   int idPengguna;
   String namaLengkap;
   String email;
-  dynamic profilePicture;
+  String? profilePicture;
   String institusi;
   String bio;
   String keahlian;
   String lokasi;
-  dynamic whatsapp;
-  dynamic instagram;
-  dynamic facebook;
-  dynamic linkedin;
+  String? whatsapp;
+  String? instagram;
+  String? facebook;
+  String? linkedin;
   String role;
   String status;
   String requestStatus;
-  DateTime requestedAt;
+  DateTime? requestedAt;
 
   Collaborator({
     required this.collaborationId,
     required this.idPengguna,
     required this.namaLengkap,
     required this.email,
-    required this.profilePicture,
+    this.profilePicture,
     required this.institusi,
     required this.bio,
     required this.keahlian,
     required this.lokasi,
-    required this.whatsapp,
-    required this.instagram,
-    required this.facebook,
-    required this.linkedin,
+    this.whatsapp,
+    this.instagram,
+    this.facebook,
+    this.linkedin,
     required this.role,
     required this.status,
     required this.requestStatus,
-    required this.requestedAt,
+    this.requestedAt,
   });
 
   factory Collaborator.fromJson(Map<String, dynamic> json) => Collaborator(
-    collaborationId: json["collaborationId"],
-    idPengguna: json["idPengguna"],
-    namaLengkap: json["namaLengkap"],
-    email: json["email"],
-    profilePicture: json["profilePicture"],
-    institusi: json["institusi"],
-    bio: json["bio"],
-    keahlian: json["keahlian"],
-    lokasi: json["lokasi"],
-    whatsapp: json["whatsapp"],
-    instagram: json["instagram"],
-    facebook: json["facebook"],
-    linkedin: json["linkedin"],
-    role: json["role"],
-    status: json["status"],
-    requestStatus: json["requestStatus"],
-    requestedAt: DateTime.parse(json["requestedAt"]),
+    collaborationId: json["collaborationId"] is int ? json["collaborationId"] : int.tryParse(json["collaborationId"]?.toString() ?? '0') ?? 0,
+    idPengguna: json["idPengguna"] is int ? json["idPengguna"] : int.tryParse(json["idPengguna"]?.toString() ?? '0') ?? 0,
+    namaLengkap: json["namaLengkap"]?.toString() ?? '',
+    email: json["email"]?.toString() ?? '',
+    profilePicture: json["profilePicture"]?.toString(),
+    institusi: json["institusi"]?.toString() ?? '',
+    bio: json["bio"]?.toString() ?? '',
+    keahlian: json["keahlian"]?.toString() ?? '',
+    lokasi: json["lokasi"]?.toString() ?? '',
+    whatsapp: json["whatsapp"]?.toString(),
+    instagram: json["instagram"]?.toString(),
+    facebook: json["facebook"]?.toString(),
+    linkedin: json["linkedin"]?.toString(),
+    role: json["role"]?.toString() ?? '',
+    status: json["status"]?.toString() ?? '',
+    requestStatus: json["requestStatus"]?.toString() ?? '',
+    requestedAt: json["requestedAt"] != null ? DateTime.tryParse(json["requestedAt"].toString()) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -132,7 +134,7 @@ class Collaborator {
     "role": role,
     "status": status,
     "requestStatus": requestStatus,
-    "requestedAt": requestedAt.toIso8601String(),
+    "requestedAt": requestedAt?.toIso8601String(),
   };
 }
 
@@ -156,13 +158,13 @@ class Project {
   });
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
-    projectId: json["projectId"],
-    title: json["title"] ?? '',
-    description: json["description"] ?? '',
-    category: json["category"] ?? '',
-    status: json["status"] ?? '',
-    repositoryLink: json["repositoryLink"] ?? '',
-    projectPicture: json["projectPicture"] ?? '',
+    projectId: json["projectId"] is int ? json["projectId"] : int.tryParse(json["projectId"]?.toString() ?? '0') ?? 0,
+    title: json["title"]?.toString() ?? '',
+    description: json["description"]?.toString() ?? '',
+    category: json["category"]?.toString() ?? '',
+    status: json["status"]?.toString() ?? '',
+    repositoryLink: json["repositoryLink"]?.toString() ?? '',
+    projectPicture: json["projectPicture"]?.toString() ?? '',
   );
 
   Map<String, dynamic> toJson() => {

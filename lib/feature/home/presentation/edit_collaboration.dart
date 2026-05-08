@@ -218,109 +218,75 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: GestureDetector(
                     onTap: _pickImage,
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: _newImagePath != null
-                                  ? Image.file(
-                                      File(_newImagePath!),
-                                      height: 220,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                    )
-                              : _existingImageUrl != null
-                              ? Image.network(
-                            _existingImageUrl!,
-                            height: 220,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            loadingBuilder:
-                                (context, child, loadingProgress) {
-                              if (loadingProgress == null)
-                                return child;
-                              return Container(
-                                height: 220,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius:
-                                  BorderRadius.circular(16),
-                                ),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    color: ColorValue.primaryColor,
-                                  ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (_, __, ___) => Container(
-                              height: 220,
-                              color: Colors.grey[200],
-                              child: const Icon(
-                                  Icons.image_not_supported,
-                                  color: Colors.grey,
-                                  size: 48),
-                            ),
-                          )
-                              : Container(
-                            height: 220,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius:
-                              BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              mainAxisAlignment:
-                              MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                    Icons
-                                        .add_photo_alternate_outlined,
-                                    size: 48,
-                                    color: Colors.grey[400]),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Tambah Gambar Cover',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                    child: Container(
+                      height: 220,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (_newImagePath != null)
+                              Image.file(
+                                File(_newImagePath!),
+                                fit: BoxFit.cover,
+                              )
+                            else if (_existingImageUrl != null &&
+                                _existingImageUrl!.isNotEmpty &&
+                                _existingImageUrl!.startsWith('http'))
+                              Image.network(
+                                _existingImageUrl!,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(
+                                      color: ColorValue.primaryColor,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (_, __, ___) => _buildPlaceholderContent(),
+                              )
+                            else
+                              _buildPlaceholderContent(),
 
-                        // Edit overlay
-                        Positioned(
-                          bottom: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.55),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.edit_outlined,
-                                    size: 14, color: Colors.white),
-                                SizedBox(width: 5),
-                                Text(
-                                  'Ganti Foto',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                            // Edit overlay
+                            Positioned(
+                              bottom: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.55),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                              ],
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit_outlined,
+                                        size: 14, color: Colors.white),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      'Ganti Foto',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -643,6 +609,29 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPlaceholderContent() {
+    return Container(
+      color: Colors.grey[100],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image_outlined, size: 40, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(
+              'Pilih Foto Sampul',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

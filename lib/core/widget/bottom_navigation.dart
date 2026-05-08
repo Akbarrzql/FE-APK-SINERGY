@@ -7,7 +7,8 @@ import 'package:gabungyuk/feature/home/presentation/home_screen.dart';
 import 'package:gabungyuk/feature/auth/login/login_screen.dart';
 import 'package:gabungyuk/feature/profile/presentation/screens/profile_screen.dart';
 
-import '../../feature/task/task_screen.dart';
+import '../../feature/task/presentation/screens/task_screen.dart';
+
 import '../gen/assets.gen.dart';
 
 class BottomNavigation extends StatefulWidget {
@@ -25,11 +26,7 @@ class _BottomNavigationState extends State<BottomNavigation>
   final List _pageStack = [];
   final SharedCode _sharedCode = SharedCode();
 
-  final _tabs = [
-    const HomeScreen(),
-    const TeskScreen(),
-    const ProfileScreen(),
-  ];
+  final _tabs = [const HomeScreen(), const TaskScreen(), const ProfileScreen()];
 
   void _pagePush(int i) {
     if (_pageStack.isEmpty) {
@@ -123,7 +120,7 @@ class _BottomNavigationState extends State<BottomNavigation>
               icon: SvgPicture.asset(Assets.image.svg.homeTask.path),
               activeIcon: SvgPicture.asset(
                 Assets.image.svg.homeTask.path,
-                colorFilter: const ColorFilter.mode(
+                colorFilter: ColorFilter.mode(
                   ColorValue.primaryColor,
                   BlendMode.srcIn,
                 ),
@@ -134,7 +131,7 @@ class _BottomNavigationState extends State<BottomNavigation>
               icon: SvgPicture.asset(Assets.image.svg.taskIcon.path),
               activeIcon: SvgPicture.asset(
                 Assets.image.svg.taskIcon.path,
-                colorFilter: const ColorFilter.mode(
+                colorFilter: ColorFilter.mode(
                   ColorValue.primaryColor,
                   BlendMode.srcIn,
                 ),
@@ -145,7 +142,7 @@ class _BottomNavigationState extends State<BottomNavigation>
               icon: SvgPicture.asset(Assets.image.svg.profileIcon.path),
               activeIcon: SvgPicture.asset(
                 Assets.image.svg.profileIcon.path,
-                colorFilter: const ColorFilter.mode(
+                colorFilter: ColorFilter.mode(
                   ColorValue.primaryColor,
                   BlendMode.srcIn,
                 ),

@@ -6,7 +6,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gabungyuk/core/common/app_navigator.dart';
 import 'package:gabungyuk/feature/splash_screen/splash_screen.dart';
 import 'package:gabungyuk/core/service/notification_service.dart';
-
+import 'package:gabungyuk/feature/auth/forgot_password/reset_password_in_app_screen.dart';
+import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {

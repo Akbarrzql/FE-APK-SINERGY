@@ -9,6 +9,7 @@ import '../widgets/profile_header.dart';
 import '../widgets/stat_card_widget.dart';
 // 1. Tambahkan import file edit profile di sini
 import 'edit_profile_screen.dart';
+import 'package:gabungyuk/feature/collaboration/presentation/collaboration_profile_screen.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_bloc.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
@@ -84,7 +85,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: 'Kolaborasi Anda',
                       icon: Icons.groups_rounded,
                       onTap: () {
-                        debugPrint("Pindah ke halaman Kolaborasi");
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CollaborationProfileScreen(),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(width: 15),

@@ -10,6 +10,7 @@ import 'package:gabungyuk/feature/home/model/view_project_model.dart';
 import 'package:gabungyuk/feature/home/model/request_collaboration_model.dart';
 import 'package:gabungyuk/feature/home/model/view_collaboration_model.dart';
 import 'package:gabungyuk/feature/home/model/pending_collaboration_model.dart';
+import 'package:gabungyuk/feature/collaboration/model/collaboration_profile_model.dart';
 import 'package:http/http.dart' as http;
 
 class CollaborationService {
@@ -325,6 +326,31 @@ class CollaborationService {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       String message = 'Gagal memproses aksi kolaborasi.';
+      try {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        message = json['message'] ?? json['msg'] ?? message;
+      } catch (_) {}
+      throw ApiException(message, response.statusCode);
+    }
+  }
+
+  Future<CollaborationProfileModel> getCollaborationDashboard() async {
+    final token = await _sharedCode.getAuthToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/collaboration/dashboard');
+
+    _logRequest('GET', url.toString(), null);
+    final response = await http.get(
+      url,
+      headers: {
+        HttpHeaders.authorizationHeader: 'Bearer $token',
+      },
+    );
+    _logResponse(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return collaborationProfileModelFromJson(response.body);
+    } else {
+      String message = 'Gagal mengambil data dashboard kolaborasi.';
       try {
         final Map<String, dynamic> json = jsonDecode(response.body);
         message = json['message'] ?? json['msg'] ?? message;

@@ -120,56 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
     'Data Analyst',
   ];
 
-  final List<Map<String, dynamic>> _collaborations = [
-    {
-      'ownerName': 'Ellenors Blundell',
-      'ownerRole': 'Pemilik Kolaborasi',
-      'ownerImageUrl': 'https://i.pravatar.cc/150?img=47',
-      'memberImages': [
-        'https://i.pravatar.cc/150?img=12',
-        'https://i.pravatar.cc/150?img=23',
-      ],
-      'extraMembers': 2,
-      'projectTitle': 'Moneyger Application Project',
-      'projectType': 'Portofolio project',
-      'projectDate': '12 Maret 2023',
-      'projectDescription':
-      'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah.',
-      'skills': ['Mobile Front End', 'Back End', 'UI/UX'],
-    },
-    {
-      'ownerName': 'Ellenors Blundell',
-      'ownerRole': 'Pemilik Kolaborasi',
-      'ownerImageUrl': 'https://i.pravatar.cc/150?img=47',
-      'memberImages': [
-        'https://i.pravatar.cc/150?img=12',
-        'https://i.pravatar.cc/150?img=23',
-      ],
-      'extraMembers': 2,
-      'projectTitle': 'Moneyger Application Project',
-      'projectType': 'Portofolio project',
-      'projectDate': '12 Maret 2023',
-      'projectDescription':
-      'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah.',
-      'skills': ['Mobile Front End', 'Back End', 'UI/UX'],
-    },
-    {
-      'ownerName': 'Rina Hartono',
-      'ownerRole': 'Pemilik Kolaborasi',
-      'ownerImageUrl': 'https://i.pravatar.cc/150?img=32',
-      'memberImages': [
-        'https://i.pravatar.cc/150?img=15',
-        'https://i.pravatar.cc/150?img=19',
-      ],
-      'extraMembers': 3,
-      'projectTitle': 'E-Commerce Platform Design',
-      'projectType': 'Freelance project',
-      'projectDate': '5 April 2023',
-      'projectDescription':
-      'Desain platform e-commerce modern dengan pengalaman pengguna yang intuitif.',
-      'skills': ['UI/UX', 'Web Design', 'Prototyping'],
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {

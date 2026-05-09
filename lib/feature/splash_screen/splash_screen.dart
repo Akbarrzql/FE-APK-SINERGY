@@ -17,6 +17,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final SharedCode _sharedCode = SharedCode();
+  Timer? _splashTimer;
 
   Future<void> _routeAfterSplash() async {
     final token = await _sharedCode.getAuthToken();
@@ -55,18 +56,23 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  Future _startSplashScreen() async {
-    var duration = const Duration(seconds: 3);
-    return Timer(duration, () {
+  void _startSplashScreen() {
+    const duration = Duration(seconds: 3);
+    _splashTimer = Timer(duration, () {
       _routeAfterSplash();
     });
   }
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _startSplashScreen();
+  }
+
+  @override
+  void dispose() {
+    _splashTimer?.cancel();
+    super.dispose();
   }
 
   @override

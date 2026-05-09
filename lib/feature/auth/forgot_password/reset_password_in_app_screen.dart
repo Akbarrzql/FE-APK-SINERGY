@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 
 class ResetPasswordInAppScreen extends StatefulWidget {
   final String oobCode;
@@ -36,7 +38,9 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
       if (mounted) setState(() => _email = email);
     } catch (e) {
       if (kDebugMode) debugPrint('verifyPasswordResetCode error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link reset tidak valid atau sudah kadaluarsa.')));
+      if (mounted) {
+        AuthUiHelper.showError(context, 'Tautan reset tidak valid atau sudah kedaluwarsa.');
+      }
       Navigator.of(context).pop();
     }
   }
@@ -45,11 +49,11 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
      final newPwd = _newPasswordController.text;
      final confirm = _confirmController.text;
      if (newPwd.length < 6) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password minimal 6 karakter')));
+        AuthUiHelper.showError(context, 'Kata sandi minimal 6 karakter.');
        return;
      }
      if (newPwd != confirm) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password tidak cocok')));
+        AuthUiHelper.showError(context, 'Kata sandi tidak cocok.');
        return;
      }
      if (_email == null) return;
@@ -67,12 +71,20 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
        await repo.updateProfile({'password': newPwd});
 
        if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password berhasil diubah dan disinkronkan. Silakan masuk kembali.')));
+           AuthUiHelper.showSuccess(context, 'Kata sandi berhasil diubah dan disinkronkan. Silakan masuk kembali.');
          Navigator.of(context).popUntil((route) => route.isFirst);
        }
      } catch (e) {
        if (kDebugMode) debugPrint('confirmPasswordReset error: $e');
-       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengganti password: $e')));
+        if (mounted) {
+          AuthUiHelper.showError(
+            context,
+            AuthUiHelper.readableError(
+              e,
+              fallback: 'Gagal mengubah kata sandi. Silakan coba lagi.',
+            ),
+          );
+        }
      } finally {
        if (mounted) setState(() => _loading = false);
      }
@@ -105,7 +117,7 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _loading ? null : _submitNewPassword,
-                child: _loading ? const CircularProgressIndicator() : const Text('Ganti Password'),
+                child: _loading ? LoadingShimmer.button() : const Text('Ganti Password'),
               ),
             ),
           ],

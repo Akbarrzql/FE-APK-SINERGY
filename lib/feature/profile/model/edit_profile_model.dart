@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final editProfileModel = editProfileModelFromJson(jsonString);
-
 import 'dart:convert';
 
 EditProfileModel editProfileModelFromJson(String str) => EditProfileModel.fromJson(json.decode(str));
@@ -20,9 +16,9 @@ class EditProfileModel {
   });
 
   factory EditProfileModel.fromJson(Map<String, dynamic> json) => EditProfileModel(
-    status: json["status"],
-    message: json["message"],
-    data: Data.fromJson(json["data"]),
+    status: json["status"] ?? 0,
+    message: json["message"] ?? '',
+    data: Data.fromJson(json["data"] ?? {}),
   );
 
   Map<String, dynamic> toJson() => {
@@ -39,11 +35,14 @@ class Data {
   int expiredAt;
   String namaLengkap;
   String profilePicture;
-  dynamic institusi;
-  dynamic bio;
-  String keahlian;
-  dynamic lokasi;
-  dynamic whatsapp;
+  String institusi;
+  String bio;
+  List<String> keahlian;
+  String lokasi;
+  String whatsapp;
+  String instagram;
+  String facebook;
+  String linkedin;
 
   Data({
     required this.userId,
@@ -57,20 +56,28 @@ class Data {
     required this.keahlian,
     required this.lokasi,
     required this.whatsapp,
+    required this.instagram,
+    required this.facebook,
+    required this.linkedin,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    userId: json["userId"],
-    email: json["email"],
-    token: json["token"],
-    expiredAt: json["expiredAt"],
-    namaLengkap: json["namaLengkap"],
+    userId: json["userId"] ?? 0,
+    email: json["email"] ?? '',
+    token: json["token"] ?? '',
+    expiredAt: json["expiredAt"] ?? 0,
+    namaLengkap: json["namaLengkap"] ?? '',
     profilePicture: json["profilePicture"]?.toString() ?? '',
-    institusi: json["institusi"],
-    bio: json["bio"],
-    keahlian: json["keahlian"],
-    lokasi: json["lokasi"],
-    whatsapp: json["whatsapp"],
+    institusi: json["institusi"]?.toString() ?? '',
+    bio: json["bio"]?.toString() ?? '',
+    keahlian: json["keahlian"] == null 
+        ? [] 
+        : List<String>.from(json["keahlian"].map((x) => x.toString())),
+    lokasi: json["lokasi"]?.toString() ?? '',
+    whatsapp: json["whatsapp"]?.toString() ?? '',
+    instagram: json["instagram"]?.toString() ?? '',
+    facebook: json["facebook"]?.toString() ?? '',
+    linkedin: json["linkedin"]?.toString() ?? '',
   );
 
   Map<String, dynamic> toJson() => {
@@ -82,8 +89,11 @@ class Data {
     "profilePicture": profilePicture,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": keahlian,
+    "keahlian": List<dynamic>.from(keahlian.map((x) => x)),
     "lokasi": lokasi,
     "whatsapp": whatsapp,
+    "instagram": instagram,
+    "facebook": facebook,
+    "linkedin": linkedin,
   };
 }

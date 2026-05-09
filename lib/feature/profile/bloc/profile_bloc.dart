@@ -17,7 +17,6 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       } catch (e) {
           if (e is ApiException) {
             if (e.statusCode == 401) {
-              // Token invalid/expired — force logout
               await AuthSessionManager.instance.forceLogout();
               return;
             }
@@ -25,6 +24,29 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           } else {
             emit(ProfileError('Terjadi kesalahan. Silakan coba lagi.'));
           }
+      }
+    });
+
+    on<UpdateProfile>((event, emit) async {
+      emit(ProfileUpdating());
+      try {
+        final response = await profileRepository.updateProfile(
+          event.body,
+          profileImageFile: event.profileImageFile,
+        );
+        emit(ProfileUpdateSuccess(response.message));
+        // Reload profile after success
+        add(LoadProfile());
+      } catch (e) {
+        if (e is ApiException) {
+          if (e.statusCode == 401) {
+            await AuthSessionManager.instance.forceLogout();
+            return;
+          }
+          emit(ProfileError(e.message));
+        } else {
+          emit(ProfileError('Gagal memperbarui profil.'));
+        }
       }
     });
   }

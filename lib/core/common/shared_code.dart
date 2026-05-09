@@ -6,7 +6,7 @@ class SharedCode {
   static const String authTokenExpiredAtKey = 'token_expired_at';
 
   String? emptyValidator(value) {
-    return value.toString().trim().isEmpty ? 'Bidang tidak boleh kosong' : null;
+    return value.toString().trim().isEmpty ? 'Masukkan tidak boleh kosong' : null;
   }
 
   String? nameValidator(value) {
@@ -32,6 +32,34 @@ class SharedCode {
     return value.toString().length < 6
         ? 'Kata sandi tidak boleh kurang dari 6 karakter'
         : null;
+  }
+
+  // Validator untuk form kolaborasi (create / edit)
+  String? titleValidator(value) {
+    final v = value?.toString() ?? '';
+    if (v.trim().isEmpty) {
+      return 'Judul tidak boleh kosong';
+    }
+    if (v.trim().length < 3) {
+      return 'Judul terlalu pendek (minimal 3 karakter)';
+    }
+    return null;
+  }
+
+  String? descriptionValidator(value) {
+    final v = value?.toString() ?? '';
+    if (v.trim().isEmpty) {
+      return 'Deskripsi tidak boleh kosong';
+    }
+    if (v.trim().length < 10) {
+      return 'Deskripsi terlalu pendek (minimal 10 karakter)';
+    }
+    return null;
+  }
+
+  String? categoryValidator(value) {
+    final v = value?.toString() ?? '';
+    return v.trim().isEmpty ? 'Kategori tidak boleh kosong' : null;
   }
 
   Future<bool> setToken(String token, String value) async {
@@ -82,15 +110,6 @@ class SharedCode {
         : DateTime.fromMillisecondsSinceEpoch(expiredAt * 1000);
 
     return DateTime.now().isAfter(expirationDate);
-  }
-
-  String convertToIdr(dynamic number, int decimalDigit) {
-    NumberFormat currencyFormatter = NumberFormat.currency(
-      locale: 'id',
-      symbol: 'Rp. ',
-      decimalDigits: decimalDigit,
-    );
-    return currencyFormatter.format(number);
   }
 
   // String get uid => FirebaseAuth.instance.currentUser!.uid;

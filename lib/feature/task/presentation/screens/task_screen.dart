@@ -22,20 +22,6 @@ class _TaskScreenState extends State<TaskScreen> {
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
-          title: Text(
-            'Task',
-            style: GoogleFonts.poppins(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.black),
-              onPressed: () {},
-            ),
-          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(60),
             child: Container(

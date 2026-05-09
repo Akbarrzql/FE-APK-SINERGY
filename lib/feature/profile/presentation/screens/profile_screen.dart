@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/auth_session_manager.dart';
+import 'package:gabungyuk/core/common/color_value.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/edit_password_screen.dart';
 import '../../model/profile_model.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/stat_card_widget.dart';
 // 1. Tambahkan import file edit profile di sini
 import 'edit_profile_screen.dart';
+import 'package:gabungyuk/feature/collaboration/presentation/collaboration_profile_screen.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_bloc.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/forgot_password_screen.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,15 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: BlocListener<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.red.shade600,
-                duration: const Duration(seconds: 4),
-                action: SnackBarAction(label: 'Tutup', onPressed: () {}),
-              ),
-            );
+            AuthUiHelper.showError(context, state.message);
           }
         },
         child: Scaffold(
@@ -90,7 +85,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: 'Kolaborasi Anda',
                       icon: Icons.groups_rounded,
                       onTap: () {
-                        debugPrint("Pindah ke halaman Kolaborasi");
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CollaborationProfileScreen(),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(width: 15),
@@ -121,7 +121,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   final result = await Navigator.push<bool?>(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditProfileScreen(profile: p),
+                      builder: (context) => BlocProvider.value(
+                        value: _profileBloc,
+                        child: EditProfileScreen(profile: p),
+                      ),
                     ),
                   );
 
@@ -130,31 +133,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _profileBloc.add(LoadProfile());
                   }
                 }),
-                const SizedBox(height: 2),
-                _menuItem(Icons.lock_open_rounded, 'Reset Password', () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
-                  );
-                }),
-                const SizedBox(height: 2),
+                 const SizedBox(height: 2),
+                 _menuItem(Icons.lock_open_rounded, 'Reset Password', () async {
+                   final result = await Navigator.push<bool?>(
+                     context,
+                     MaterialPageRoute(
+                       builder: (context) => const EditPasswordScreen(),
+                     ),
+                   );
+
+                   if (result == true) {
+                     _profileBloc.add(LoadProfile());
+                   }
+                 }),
+                 const SizedBox(height: 2),
                 _menuItem(Icons.logout, 'Keluar', () async {
-                  final confirm = await showDialog<bool>(
+                  final confirm = await AuthUiHelper.showAppDialog<bool>(
                     context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Konfirmasi'),
-                      content: const Text('Anda yakin ingin keluar dari akun?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Batal'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Keluar'),
-                        ),
-                      ],
+                    title: 'Konfirmasi',
+                    content: const Text(
+                      'Anda yakin ingin keluar dari akun?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: Color(0xFF555555),
+                      ),
                     ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: Text('Batal', style: TextStyle(color: ColorValue.primaryColor)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        child: const Text('Keluar'),
+                      ),
+                    ],
                   );
 
                   if (confirm == true) {
@@ -173,40 +188,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // shimmer loading effect
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              LoadingShimmer.circle(size: 70),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LoadingShimmer(height: 18, width: 150),
+                    const SizedBox(height: 8),
+                    LoadingShimmer(height: 14, width: 120),
+                  ],
                 ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(height: 18, color: Colors.white, width: 150),
-                      const SizedBox(height: 8),
-                      Container(height: 14, color: Colors.white, width: 120),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(height: 10, color: Colors.white),
-            const SizedBox(height: 8),
-            Container(height: 10, color: Colors.white),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          LoadingShimmer(height: 10, width: double.infinity),
+          const SizedBox(height: 8),
+          LoadingShimmer(height: 10, width: double.infinity),
+        ],
       ),
     );
   }
@@ -258,4 +262,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
 }

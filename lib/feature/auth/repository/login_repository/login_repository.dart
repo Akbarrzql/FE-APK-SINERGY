@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/auth/model/login_model/login_model.dart';
@@ -13,6 +14,10 @@ abstract class LoginRepository {
   Future<LoginModel> loginUser({
     required String email,
     required String password,
+  });
+
+  Future<LoginModel> loginGoogle({
+    required String idToken,
   });
 }
 
@@ -31,26 +36,52 @@ class LoginRepositoryImpl implements LoginRepository {
     );
   }
 
+  @override
+  Future<LoginModel> loginGoogle({required String idToken}) async {
+    return _postLogin(
+      url: Uri.parse('${ApiConfig.baseUrl}/api/v1/users/login/google'),
+      body: {'idToken': idToken},
+      logLabel: 'Login Google',
+    );
+  }
+
   Future<LoginModel> _loginWithBackend({
     required String email,
     required String password,
     required bool allowGoogleFallback,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/users/login');
+    return _postLogin(
+      url: Uri.parse('${ApiConfig.baseUrl}/api/v1/users/login'),
+      body: {
+        'email': email,
+        'password': password,
+      },
+      logLabel: 'Login',
+      allowGoogleFallback: allowGoogleFallback,
+      email: email,
+      password: password,
+    );
+  }
+
+  Future<LoginModel> _postLogin({
+    required Uri url,
+    required Map<String, dynamic> body,
+    required String logLabel,
+    bool allowGoogleFallback = false,
+    String? email,
+    String? password,
+  }) async {
     final response = await http.post(
       url,
       headers: {
         HttpHeaders.contentTypeHeader: 'application/json',
       },
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
+      body: jsonEncode(body),
     );
 
     if (kDebugMode) {
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
+      print('$logLabel response status: ${response.statusCode}');
+      print('$logLabel response body: ${response.body}');
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -63,7 +94,12 @@ class LoginRepositoryImpl implements LoginRepository {
         return loginModel;
       } catch (parseError) {
         if (kDebugMode) print('Login model parsing error: $parseError, response: ${response.body}');
-        throw ApiException('Format respons tidak valid dari server. Silakan coba lagi.', response.statusCode);
+        throw ApiException(
+          AuthUiHelper.toIndonesianMessage(
+            'Format respons tidak valid dari server. Silakan coba lagi.',
+          ),
+          response.statusCode,
+        );
       }
     }
 
@@ -71,17 +107,20 @@ class LoginRepositoryImpl implements LoginRepository {
     try {
       final Map<String, dynamic> json = jsonDecode(response.body);
       if (json.containsKey('message')) {
-        message = json['message'].toString();
+        message = AuthUiHelper.toIndonesianMessage(json['message'].toString());
       } else if (json.containsKey('msg')) {
-        message = json['msg'].toString();
-      } else if (json.containsKey('error')) {
-        message = json['error'].toString();
+        message = AuthUiHelper.toIndonesianMessage(json['msg'].toString());
+      } else if (json.containsKey('details')) {
+        message = AuthUiHelper.toIndonesianMessage(json['details'].toString());
       }
     } catch (_) {
       // ignore json parse errors
     }
 
-    if (allowGoogleFallback && _shouldTryGoogleFallback(response.statusCode, message)) {
+    if (allowGoogleFallback &&
+        email != null &&
+        password != null &&
+        _shouldTryGoogleFallback(response.statusCode, message)) {
       final googleSecret = await _resolveGoogleSecret(email);
       if (googleSecret != null && googleSecret.isNotEmpty && googleSecret != password) {
         if (kDebugMode) {
@@ -103,7 +142,7 @@ class LoginRepositoryImpl implements LoginRepository {
       if (message.isEmpty) message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
     }
 
-    throw ApiException(message, response.statusCode);
+    throw ApiException(AuthUiHelper.toIndonesianMessage(message), response.statusCode);
   }
 
   bool _shouldTryGoogleFallback(int statusCode, String message) {
@@ -119,6 +158,11 @@ class LoginRepositoryImpl implements LoginRepository {
 
       final provider = userData['provider']?.toString() ?? '';
       final googleUid = userData['google_uid']?.toString() ?? '';
+      final hasLocalPassword = userData['has_local_password'] as bool? ?? false;
+
+      if (hasLocalPassword && googleUid.isNotEmpty) {
+        return FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
+      }
 
       if (provider == 'google' && googleUid.isNotEmpty) {
         return FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
@@ -126,8 +170,9 @@ class LoginRepositoryImpl implements LoginRepository {
       return null;
     } catch (e) {
       if (kDebugMode) {
-        print('Login fallback error: $e');
+        print('Firestore fallback error (likely permission denied): $e');
       }
+      // Jangan throw error di sini agar login backend utama tetap bisa berhasil
       return null;
     }
   }

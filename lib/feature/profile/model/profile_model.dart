@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final profileModel = profileModelFromJson(jsonString);
-
 import 'dart:convert';
 
 ProfileModel profileModelFromJson(String str) => ProfileModel.fromJson(json.decode(str));
@@ -13,11 +9,14 @@ class ProfileModel {
   String profilePicture;
   String namaLengkap;
   String email;
-  dynamic institusi;
-  dynamic bio;
-  dynamic keahlian;
-  dynamic lokasi;
-  dynamic whatsapp;
+  String institusi;
+  String bio;
+  List<String> keahlian;
+  String lokasi;
+  String whatsapp;
+  String instagram;
+  String facebook;
+  String linkedin;
 
   ProfileModel({
     required this.idPengguna,
@@ -29,19 +28,30 @@ class ProfileModel {
     required this.keahlian,
     required this.lokasi,
     required this.whatsapp,
+    required this.instagram,
+    required this.facebook,
+    required this.linkedin,
   });
 
-  factory ProfileModel.fromJson(Map<String, dynamic> json) => ProfileModel(
-    idPengguna: json["idPengguna"],
-    profilePicture: json["profilePicture"]?.toString() ?? '',
-    namaLengkap: json["namaLengkap"],
-    email: json["email"],
-    institusi: json["institusi"],
-    bio: json["bio"],
-    keahlian: json["keahlian"],
-    lokasi: json["lokasi"],
-    whatsapp: json["whatsapp"],
-  );
+  factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    final data = json["data"] != null ? json["data"] : json;
+    return ProfileModel(
+      idPengguna: data["idPengguna"] ?? 0,
+      profilePicture: data["profilePicture"]?.toString() ?? '',
+      namaLengkap: data["namaLengkap"] ?? '',
+      email: data["email"] ?? '',
+      institusi: data["institusi"]?.toString() ?? '',
+      bio: data["bio"]?.toString() ?? '',
+      keahlian: data["keahlian"] == null 
+          ? [] 
+          : List<String>.from(data["keahlian"].map((x) => x.toString())),
+      lokasi: data["lokasi"]?.toString() ?? '',
+      whatsapp: data["whatsapp"]?.toString() ?? '',
+      instagram: data["instagram"]?.toString() ?? '',
+      facebook: data["facebook"]?.toString() ?? '',
+      linkedin: data["linkedin"]?.toString() ?? '',
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     "idPengguna": idPengguna,
@@ -50,8 +60,11 @@ class ProfileModel {
     "email": email,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": keahlian,
+    "keahlian": List<dynamic>.from(keahlian.map((x) => x)),
     "lokasi": lokasi,
     "whatsapp": whatsapp,
+    "instagram": instagram,
+    "facebook": facebook,
+    "linkedin": linkedin,
   };
 }

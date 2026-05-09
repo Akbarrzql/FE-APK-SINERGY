@@ -38,12 +38,15 @@ class Data {
   String token;
   int expiredAt;
   String namaLengkap;
-  dynamic profilePicture;
-  dynamic institusi;
-  dynamic bio;
-  dynamic keahlian;
-  dynamic lokasi;
-  dynamic whatsapp;
+  String? profilePicture;
+  String? institusi;
+  String? bio;
+  List<String> keahlian;
+  String? lokasi;
+  String? whatsapp;
+  String? instagram;
+  String? facebook;
+  String? linkedin;
 
   Data({
     required this.userId,
@@ -51,26 +54,34 @@ class Data {
     required this.token,
     required this.expiredAt,
     required this.namaLengkap,
-    required this.profilePicture,
-    required this.institusi,
-    required this.bio,
+    this.profilePicture,
+    this.institusi,
+    this.bio,
     required this.keahlian,
-    required this.lokasi,
-    required this.whatsapp,
+    this.lokasi,
+    this.whatsapp,
+    this.instagram,
+    this.facebook,
+    this.linkedin,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    userId: json["userId"],
-    email: json["email"],
-    token: json["token"],
-    expiredAt: json["expiredAt"],
-    namaLengkap: json["namaLengkap"],
+    userId: json["userId"] ?? 0,
+    email: json["email"] ?? '',
+    token: json["token"] ?? '',
+    expiredAt: json["expiredAt"] ?? 0,
+    namaLengkap: json["namaLengkap"] ?? '',
     profilePicture: json["profilePicture"],
     institusi: json["institusi"],
     bio: json["bio"],
-    keahlian: json["keahlian"],
+    keahlian: json["keahlian"] == null
+        ? []
+        : List<String>.from(json["keahlian"].map((x) => x.toString())),
     lokasi: json["lokasi"],
     whatsapp: json["whatsapp"],
+    instagram: json["instagram"],
+    facebook: json["facebook"],
+    linkedin: json["linkedin"],
   );
 
   Map<String, dynamic> toJson() => {
@@ -82,8 +93,11 @@ class Data {
     "profilePicture": profilePicture,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": keahlian,
+    "keahlian": List<dynamic>.from(keahlian.map((x) => x)),
     "lokasi": lokasi,
     "whatsapp": whatsapp,
+    "instagram": instagram,
+    "facebook": facebook,
+    "linkedin": linkedin,
   };
 }

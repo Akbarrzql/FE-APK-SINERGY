@@ -15,6 +15,17 @@ class FirebaseUserSyncHelper {
     return '${hash.toString().substring(0, 24)}Ab@1';
   }
 
+  /// Hash password untuk disimpan di Firestore
+  String hashPassword(String password) {
+    final hash = sha256.convert(utf8.encode('gabungyuk_pwd_$password'));
+    return hash.toString();
+  }
+
+  /// Verify password against hash
+  bool verifyPassword(String password, String hash) {
+    return hashPassword(password) == hash;
+  }
+
   Future<void> upsertUserDoc({
     required String uid,
     required String email,
@@ -22,11 +33,14 @@ class FirebaseUserSyncHelper {
     required String provider,
     String? googleUid,
     bool hasLocalPassword = true,
+    bool passwordJustSet = false,
+    String? localPassword,
+    String? plainPassword,
   }) async {
     final docId = email.trim();
     final ref = _firestore.collection('users').doc(docId);
     if (kDebugMode) {
-      debugPrint('FIRESTORE SYNC: upserting users/$docId (uid=$uid, provider=$provider)');
+      debugPrint('FIRESTORE SYNC: upserting users/$docId (uid=$uid, provider=$provider, hasLocalPassword=$hasLocalPassword)');
     }
     await ref.set({
       'uid': uid,
@@ -35,6 +49,9 @@ class FirebaseUserSyncHelper {
       'provider': provider,
       if (googleUid != null) 'google_uid': googleUid,
       'has_local_password': hasLocalPassword,
+      if (localPassword != null) 'local_password': localPassword,
+      if (plainPassword != null) 'plain_password': plainPassword,
+      if (passwordJustSet) 'password_set_at': FieldValue.serverTimestamp(),
       'updated_at': FieldValue.serverTimestamp(),
       'created_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -53,5 +70,15 @@ class FirebaseUserSyncHelper {
     }
 
     return snapshot.docs.first.data();
+  }
+
+  /// Update FCM Token untuk push notifications
+  Future<void> updateFcmToken(String email, String token) async {
+    final docId = email.trim();
+    final ref = _firestore.collection('users').doc(docId);
+    await ref.set({
+      'fcm_token': token,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }

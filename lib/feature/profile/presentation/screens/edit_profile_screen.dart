@@ -14,7 +14,9 @@ import 'package:gabungyuk/feature/profile/bloc/profile_bloc.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
+import 'package:gabungyuk/core/common/color_value.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final ProfileModel? profile;
@@ -180,9 +182,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: Padding(
                       padding: EdgeInsets.only(right: 16),
                       child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              ColorValue.primaryColor),
+                        ),
                       ),
                     ),
                   );
@@ -192,7 +198,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   child: Text(
                     'Simpan',
                     style: GoogleFonts.poppins(
-                      color: Colors.blue,
+                      color: ColorValue.primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 

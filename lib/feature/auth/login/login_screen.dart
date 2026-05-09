@@ -6,6 +6,7 @@ import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_state.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../forgot_password/reset_password_screen.dart';
 import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -366,11 +367,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: isLoading
                           ? const SizedBox(
-                              height: 22,
-                              width: 22,
+                              height: 20,
+                              width: 20,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Text(
@@ -403,11 +405,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: isLoading
                           ? const SizedBox(
-                              height: 22,
-                              width: 22,
+                              height: 20,
+                              width: 20,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                valueColor: AlwaysStoppedAnimation<Color>(_titleColor),
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.black),
                               ),
                             )
                           : const Row(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/collaboration/model/collaboration_profile_model.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
@@ -81,7 +82,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           _buildTabBar(),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? _buildShimmerLoading()
                 : TabBarView(
                     controller: _tabController,
                     children: [
@@ -449,6 +450,23 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
         label,
         style: TextStyle(color: ColorValue.primaryColor, fontSize: 11, fontWeight: FontWeight.w600),
       ),
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: LoadingShimmer(
+            width: double.infinity,
+            height: 200,
+            borderRadius: 16,
+          ),
+        );
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 
@@ -116,7 +117,7 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _loading ? null : _submitNewPassword,
-                child: _loading ? const CircularProgressIndicator() : const Text('Ganti Password'),
+                child: _loading ? LoadingShimmer.button() : const Text('Ganti Password'),
               ),
             ),
           ],

@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../activity_log/activity/bloc/activity_log_bloc.dart';
 import '../../../activity_log/activity/bloc/activity_log_event.dart';
 import '../../../activity_log/activity/bloc/activity_log_state.dart';
@@ -161,16 +161,12 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
       padding: const EdgeInsets.all(20),
       itemCount: 6,
       itemBuilder: (context, index) {
-        return Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 15),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 15),
+          child: LoadingShimmer(
+            width: double.infinity,
             height: 80,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
+            borderRadius: 16,
           ),
         );
       },

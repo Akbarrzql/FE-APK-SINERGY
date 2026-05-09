@@ -6,6 +6,7 @@ import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../core/common/color_value.dart';
 import 'create_collaboration.dart';
 import 'detail_collaboration.dart';
@@ -120,6 +121,17 @@ class _HomeScreenState extends State<HomeScreen> {
     'Data Analyst',
   ];
 
+
+  Widget _buildShimmerProjectCard() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: LoadingShimmer(
+        width: double.infinity,
+        height: 180,
+        borderRadius: 20,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -366,8 +378,11 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: _isLoadingProjects
-                    ? const SliverToBoxAdapter(
-                    child: Center(child: CircularProgressIndicator()))
+                    ? SliverToBoxAdapter(
+                        child: Column(
+                          children: List.generate(3, (index) => _buildShimmerProjectCard()),
+                        ),
+                      )
                     : _filteredProjects.isEmpty
                     ? const SliverToBoxAdapter(
                   child: Center(

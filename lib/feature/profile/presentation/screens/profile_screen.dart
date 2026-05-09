@@ -14,7 +14,7 @@ import 'package:gabungyuk/feature/profile/bloc/profile_bloc.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -188,40 +188,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // shimmer loading effect
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              LoadingShimmer.circle(size: 70),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LoadingShimmer(height: 18, width: 150),
+                    const SizedBox(height: 8),
+                    LoadingShimmer(height: 14, width: 120),
+                  ],
                 ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(height: 18, color: Colors.white, width: 150),
-                      const SizedBox(height: 8),
-                      Container(height: 14, color: Colors.white, width: 120),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(height: 10, color: Colors.white),
-            const SizedBox(height: 8),
-            Container(height: 10, color: Colors.white),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          LoadingShimmer(height: 10, width: double.infinity),
+          const SizedBox(height: 8),
+          LoadingShimmer(height: 10, width: double.infinity),
+        ],
       ),
     );
   }

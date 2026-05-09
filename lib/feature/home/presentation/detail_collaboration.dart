@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
@@ -285,9 +285,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return _buildShimmerLoading();
     }
 
     final project = _detailModel?.data.project;
@@ -855,6 +853,47 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
       width: double.infinity,
       color: Colors.grey[300],
       child: const Icon(Icons.image, size: 50, color: Colors.grey),
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return Scaffold(
+      backgroundColor: ColorValue.backgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: LoadingShimmer(height: 30, width: 100),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: LoadingShimmer(
+                  height: 220,
+                  width: double.infinity,
+                  borderRadius: 16,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LoadingShimmer(height: 24, width: 200),
+                    const SizedBox(height: 10),
+                    LoadingShimmer(height: 16, width: 150),
+                    const SizedBox(height: 20),
+                    LoadingShimmer(height: 80, width: double.infinity),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

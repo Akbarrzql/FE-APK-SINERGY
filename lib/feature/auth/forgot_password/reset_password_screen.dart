@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/common/color_value.dart';
 import '../../../core/common/shared_code.dart';
 import '../../../core/gen/assets.gen.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/feature/auth/service/reset_password_service.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 
@@ -189,14 +190,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           ),
                           child: _isSubmitting
                               ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
                               : const Text(
                             'Atur Ulang Kata Sandi',
                             style: TextStyle(

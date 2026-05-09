@@ -4,6 +4,7 @@ import 'package:gabungyuk/feature/auth/service/otp_service.dart';
 import '../../../../core/gen/assets.gen.dart';
 import '../../../core/common/auth_ui_helper.dart';
 import '../../../core/common/color_value.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'otp_verify_screen.dart';
 
 class OtpRequestScreen extends StatefulWidget {
@@ -155,7 +156,8 @@ class _OtpRequestScreenState extends State<OtpRequestScreen> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
                               : const Text(

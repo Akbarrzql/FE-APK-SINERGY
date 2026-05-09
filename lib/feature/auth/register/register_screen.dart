@@ -5,6 +5,7 @@ import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../forgot_password/reset_password_screen.dart';
 
 import '../../../../core/gen/assets.gen.dart';
@@ -231,11 +232,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       child: isLoading
                           ? const SizedBox(
-                              width: 22,
-                              height: 22,
+                              height: 20,
+                              width: 20,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Text(
@@ -266,11 +268,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       child: isLoading
                           ? const SizedBox(
-                              width: 22,
-                              height: 22,
+                              height: 20,
+                              width: 20,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                valueColor: AlwaysStoppedAnimation<Color>(_titleColor),
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.black),
                               ),
                             )
                           : const Row(

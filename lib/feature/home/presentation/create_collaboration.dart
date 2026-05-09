@@ -58,7 +58,11 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(
+          color: ColorValue.primaryColor,
+        ),
+      ),
     );
 
     try {

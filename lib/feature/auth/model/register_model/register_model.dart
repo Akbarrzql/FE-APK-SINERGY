@@ -39,14 +39,14 @@ class Data {
   int expiredAt;
   String namaLengkap;
   dynamic profilePicture;
-  String institusi;
-  String bio;
-  List<String> keahlian;
-  String lokasi;
-  String whatsapp;
-  String instagram;
-  String facebook;
-  String linkedin;
+  String? institusi;
+  String? bio;
+  List<String>? keahlian;
+  String? lokasi;
+  String? whatsapp;
+  String? instagram;
+  String? facebook;
+  String? linkedin;
 
   Data({
     required this.userId,
@@ -55,14 +55,14 @@ class Data {
     required this.expiredAt,
     required this.namaLengkap,
     required this.profilePicture,
-    required this.institusi,
-    required this.bio,
-    required this.keahlian,
-    required this.lokasi,
-    required this.whatsapp,
-    required this.instagram,
-    required this.facebook,
-    required this.linkedin,
+    this.institusi,
+    this.bio,
+    this.keahlian,
+    this.lokasi,
+    this.whatsapp,
+    this.instagram,
+    this.facebook,
+    this.linkedin,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -74,7 +74,7 @@ class Data {
     profilePicture: json["profilePicture"],
     institusi: json["institusi"],
     bio: json["bio"],
-    keahlian: List<String>.from(json["keahlian"].map((x) => x)),
+    keahlian: json["keahlian"] == null ? null : List<String>.from(json["keahlian"].map((x) => x)),
     lokasi: json["lokasi"],
     whatsapp: json["whatsapp"],
     instagram: json["instagram"],
@@ -91,7 +91,7 @@ class Data {
     "profilePicture": profilePicture,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": List<dynamic>.from(keahlian.map((x) => x)),
+    "keahlian": keahlian == null ? null : List<dynamic>.from(keahlian!.map((x) => x)),
     "lokasi": lokasi,
     "whatsapp": whatsapp,
     "instagram": instagram,

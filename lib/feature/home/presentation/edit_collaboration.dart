@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../../core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 
@@ -249,12 +249,9 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                                 fit: BoxFit.cover,
                                 loadingBuilder: (context, child, loadingProgress) {
                                   if (loadingProgress == null) return child;
-                                  return Shimmer.fromColors(
-                                    baseColor: Colors.grey.shade300,
-                                    highlightColor: Colors.grey.shade100,
-                                    child: Container(
-                                      color: Colors.white,
-                                    ),
+                                  return const LoadingShimmer(
+                                    width: double.infinity,
+                                    height: double.infinity,
                                   );
                                 },
                                 errorBuilder: (_, __, ___) => _buildPlaceholderContent(),

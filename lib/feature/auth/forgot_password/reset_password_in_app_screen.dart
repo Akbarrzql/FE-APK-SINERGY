@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
-import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 
 class ResetPasswordInAppScreen extends StatefulWidget {
@@ -58,24 +57,25 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
      }
      if (_email == null) return;
 
-     try {
-       setState(() => _loading = true);
+      try {
+        setState(() => _loading = true);
 
-       // Confirm password reset with Firebase using oobCode
-       if (kDebugMode) debugPrint('RESET PASSWORD: Confirming Firebase password reset for $_email');
-       await FirebaseAuth.instance.confirmPasswordReset(code: widget.oobCode, newPassword: newPwd);
+        // ✅ Confirm password reset with Firebase
+        if (kDebugMode) debugPrint('RESET PASSWORD: Confirming Firebase password reset');
+        await FirebaseAuth.instance.confirmPasswordReset(
+          code: widget.oobCode,
+          newPassword: newPwd,
+        );
 
-       // Update backend password via existing profile update endpoint
-       if (kDebugMode) debugPrint('RESET PASSWORD: Syncing password to backend for $_email');
-       final repo = ProfileRepositoryImpl();
-       await repo.updateProfile({'password': newPwd});
-
-       if (mounted) {
-           AuthUiHelper.showSuccess(context, 'Kata sandi berhasil diubah dan disinkronkan. Silakan masuk kembali.');
-         Navigator.of(context).popUntil((route) => route.isFirst);
-       }
-     } catch (e) {
-       if (kDebugMode) debugPrint('confirmPasswordReset error: $e');
+        if (mounted) {
+          AuthUiHelper.showSuccess(
+            context,
+            'Kata sandi berhasil diubah. Silakan masuk kembali.'
+          );
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('RESET PASSWORD error: $e');
         if (mounted) {
           AuthUiHelper.showError(
             context,
@@ -85,9 +85,9 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
             ),
           );
         }
-     } finally {
-       if (mounted) setState(() => _loading = false);
-     }
+      } finally {
+        if (mounted) setState(() => _loading = false);
+      }
    }
 
   @override

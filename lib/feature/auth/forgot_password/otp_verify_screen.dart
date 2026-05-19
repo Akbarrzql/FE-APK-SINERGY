@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:gabungyuk/feature/auth/service/otp_service.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/reset_password_screen.dart';
+import 'package:gabungyuk/feature/auth/service/firebase_password_service.dart';
+import 'package:gabungyuk/feature/auth/forgot_password/reset_password_in_app_screen.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
-import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../core/gen/assets.gen.dart';
 
 class OtpVerifyScreen extends StatefulWidget {
@@ -27,31 +26,31 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   Future<void> _verify() async {
     final code = _codeController.text.trim();
     if (code.isEmpty) {
-      AuthUiHelper.showError(context, 'Masukkan kode OTP.');
+      AuthUiHelper.showError(context, 'Masukkan kode verifikasi.');
       return;
     }
 
     setState(() => _isVerifying = true);
     try {
-      final ok = await OtpService.instance.verifyOtp(widget.email, code);
+      // ✅ Verify code dengan Firebase
+      await FirebasePasswordService.instance.verifyPasswordResetCode(code);
+
       if (!mounted) return;
-      if (ok) {
-        AuthUiHelper.showSuccess(context, 'Verifikasi berhasil!');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResetPasswordScreen(
-              email: widget.email,
-              otp: code,
-            ),
-          ),
-        );
-      } else {
-        AuthUiHelper.showError(context, 'Kode OTP tidak valid atau sudah kedaluwarsa.');
-      }
+      AuthUiHelper.showSuccess(context, 'Verifikasi berhasil!');
+
+      // Navigate to password reset form
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResetPasswordInAppScreen(oobCode: code),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
-      AuthUiHelper.showError(context, 'Gagal memverifikasi kode OTP. Silakan coba lagi.');
+      AuthUiHelper.showError(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+      );
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
@@ -73,14 +72,14 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                     child: const Icon(Icons.arrow_back, color: ColorValue.textPrimary, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Verifikasi OTP',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: ColorValue.textPrimary,
-                    ),
-                  ),
+                   const Text(
+                     'Verifikasi Email',
+                     style: TextStyle(
+                       fontSize: 18,
+                       fontWeight: FontWeight.w700,
+                       color: ColorValue.textPrimary,
+                     ),
+                   ),
                 ],
               ),
             ),
@@ -96,7 +95,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                     ),
                     const SizedBox(height: 28),
                     const Text(
-                      'Masukkan Kode OTP',
+                      'Masukkan Kode Verifikasi',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -114,7 +113,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                           fontFamily: 'Poppins',
                         ),
                         children: [
-                          const TextSpan(text: 'Masukkan 6 digit kode OTP yang telah dikirimkan ke '),
+                          const TextSpan(text: 'Masukkan kode verifikasi yang telah dikirimkan ke email '),
                           TextSpan(
                             text: widget.email,
                             style: const TextStyle(
@@ -183,7 +182,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                                 ),
                               )
                             : const Text(
-                                'Verifikasi',
+                                'Lanjutkan',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,

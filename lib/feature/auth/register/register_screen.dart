@@ -1,17 +1,14 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
-import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../forgot_password/reset_password_screen.dart';
 
 import '../../../../core/gen/assets.gen.dart';
 import '../../../../core/gen/fonts.gen.dart';
 import '../../../core/common/shared_code.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../service/firebase_integration_service.dart';
 import '../../../core/widget/bottom_navigation.dart';
 import '../login/login_screen.dart';
@@ -48,20 +45,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Create Firebase account safely without awaiting; ignore errors (account may already exist)
-  void _safeFirebaseCreateUser(String email, String password) {
-    () async {
-      try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      } catch (e) {
-        if (kDebugMode) debugPrint('SAFE FIREBASE CREATE IGNORED: $e');
-      }
-    }();
-  }
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -78,25 +61,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFFFFFFF),
         body: BlocConsumer<RegisterPageBloc, RegisterPageState>(
-          listener: (context, state) {
-            if (state is RegisterPageLoaded) {
-               FocusManager.instance.primaryFocus?.unfocus();
+           listener: (context, state) {
+             if (state is RegisterPageLoaded) {
+                FocusManager.instance.primaryFocus?.unfocus();
 
-               // Try to create Firebase account with same credentials so Firebase
-               // is in sync. If it fails (account already exists) we ignore and
-               // continue because backend registration already succeeded.
-               _safeFirebaseCreateUser(_emailController.text.trim(), _passwordController.text);
 
-               Navigator.pushReplacement(
-                 context,
-                 MaterialPageRoute(
-                   builder: (context) => const BottomNavigation(),
-                 ),
-               );
-             } else if (state is RegisterPageError) {
-              AuthUiHelper.showError(context, state.errorMessage);
-            }
-          },
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BottomNavigation(),
+                  ),
+                );
+              } else if (state is RegisterPageError) {
+               AuthUiHelper.showError(context, state.errorMessage);
+             }
+           },
           builder: (context, state) {
             return _buildInitialLayout(context, state);
           },

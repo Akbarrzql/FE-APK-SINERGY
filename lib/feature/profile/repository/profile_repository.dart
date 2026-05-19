@@ -137,13 +137,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final editModel = editProfileModelFromJson(response.body);
         
-        // If server returns new token, update session
-        if (editModel.data.token.isNotEmpty) {
-          await _sharedCode.saveAuthSession(
-            token: editModel.data.token,
-            expiredAt: editModel.data.expiredAt,
-          );
-        }
+        // Note: We no longer save the token from the backend response here 
+        // because we are now using Firebase ID Token as the primary auth session.
+
         return editModel;
       } else {
         String message = 'Terjadi kesalahan. Silakan coba lagi.';

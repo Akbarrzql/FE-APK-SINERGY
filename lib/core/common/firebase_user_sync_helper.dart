@@ -36,6 +36,7 @@ class FirebaseUserSyncHelper {
     bool passwordJustSet = false,
     String? localPassword,
     String? plainPassword,
+    String? firebaseIdToken,
   }) async {
     final docId = email.trim();
     final ref = _firestore.collection('users').doc(docId);
@@ -51,6 +52,7 @@ class FirebaseUserSyncHelper {
       'has_local_password': hasLocalPassword,
       if (localPassword != null) 'local_password': localPassword,
       if (plainPassword != null) 'plain_password': plainPassword,
+      if (firebaseIdToken != null) 'firebase_id_token': firebaseIdToken,
       if (passwordJustSet) 'password_set_at': FieldValue.serverTimestamp(),
       'updated_at': FieldValue.serverTimestamp(),
       'created_at': FieldValue.serverTimestamp(),
@@ -78,6 +80,25 @@ class FirebaseUserSyncHelper {
     final ref = _firestore.collection('users').doc(docId);
     await ref.set({
       'fcm_token': token,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Update Firebase ID Token
+  Future<void> updateUserFirebaseToken({
+    required String uid,
+    required String email,
+    String? firebaseIdToken,
+  }) async {
+    final docId = email.trim();
+    final ref = _firestore.collection('users').doc(docId);
+    if (kDebugMode) {
+      debugPrint('FIRESTORE: updating Firebase ID Token for $email');
+    }
+    await ref.set({
+      'uid': uid,
+      'firebase_id_token': firebaseIdToken,
+      'firebase_token_updated_at': FieldValue.serverTimestamp(),
       'updated_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

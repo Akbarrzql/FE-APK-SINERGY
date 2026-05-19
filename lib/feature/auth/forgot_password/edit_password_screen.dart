@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
-import 'package:gabungyuk/feature/auth/service/reset_password_service.dart';
-import 'package:gabungyuk/core/widget/loading_shimmer.dart';
+import 'package:gabungyuk/feature/auth/service/firebase_password_service.dart';
 import '../../../../core/common/color_value.dart';
 import '../../../core/gen/assets.gen.dart';
 
@@ -35,7 +34,8 @@ class _EditPasswordScreenState extends State<EditPasswordScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await ResetPasswordService.instance.changePasswordForCurrentUser(
+      // ✅ Use Firebase to update password
+      await FirebasePasswordService.instance.updatePasswordForCurrentUser(
         oldPassword: _oldPasswordController.text.trim(),
         newPassword: _newPasswordController.text.trim(),
       );
@@ -47,10 +47,7 @@ class _EditPasswordScreenState extends State<EditPasswordScreen> {
       if (!mounted) return;
       AuthUiHelper.showError(
         context,
-        AuthUiHelper.readableError(
-          e,
-          fallback: 'Gagal memperbarui kata sandi. Silakan coba lagi.',
-        ),
+        e.toString().replaceFirst('Exception: ', ''),
       );
     } finally {
       if (mounted) {

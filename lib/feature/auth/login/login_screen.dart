@@ -6,10 +6,8 @@ import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_state.dart';
-import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../forgot_password/reset_password_screen.dart';
 import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import '../../../core/widget/auth_text_field.dart';
 import '../service/firebase_integration_service.dart';
@@ -47,37 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _loginPageBloc = LoginPageBloc(
       loginRepository: LoginRepositoryImpl(),
     );
-  }
-
-  // Try signing in to Firebase but ignore any errors — we only want a local
-  // Firebase session when backend login succeeded.
-  void _safeFirebaseSignIn(String email, String password) {
-    () async {
-      try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      } catch (e) {
-        try {
-          final userData = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
-          final provider = userData?['provider']?.toString() ?? '';
-          final googleUid = userData?['google_uid']?.toString() ?? '';
-          if (provider == 'google' && googleUid.isNotEmpty) {
-            final secret = FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
-            await FirebaseAuth.instance.signInWithEmailAndPassword(
-              email: email,
-              password: secret,
-            );
-            return;
-          }
-        } catch (fallbackError) {
-          if (kDebugMode) debugPrint('SAFE FIREBASE SIGNIN FALLBACK IGNORED: $fallbackError');
-        }
-
-        if (kDebugMode) debugPrint('SAFE FIREBASE SIGNIN IGNORED: $e');
-      }
-    }();
   }
 
   @override
@@ -206,30 +173,26 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFFFFFFF),
         body: BlocConsumer<LoginPageBloc, LoginPageState>(
-          listener: (context, state) {
-            if (state is LoginPageLoaded) {
-              FocusManager.instance.primaryFocus?.unfocus();
+           listener: (context, state) {
+             if (state is LoginPageLoaded) {
+               FocusManager.instance.primaryFocus?.unfocus();
 
-              // Try to sign in to Firebase with the same credentials so Firebase
-              // session exists locally. If it fails we ignore and proceed with
-              // navigation because backend login already succeeded.
-              _safeFirebaseSignIn(_emailController.text.trim(), _passwordController.text);
 
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BottomNavigation(),
-                ),
-              );
-             } else if (state is LoginPageError) {
-               // 🔍 Check if it's a Google-only user trying manual login
-               _handleLoginError(
+               Navigator.pushReplacement(
                  context,
-                 state.errorMessage,
-                 _emailController.text.trim(),
+                 MaterialPageRoute(
+                   builder: (context) => const BottomNavigation(),
+                 ),
                );
-             }
-          },
+              } else if (state is LoginPageError) {
+                // 🔍 Check if it's a Google-only user trying manual login
+                _handleLoginError(
+                  context,
+                  state.errorMessage,
+                  _emailController.text.trim(),
+                );
+              }
+           },
           builder: (context, state) {
             return _buildInitialLayout(context, state);
           },

@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-import '../../model/register_model/register_model.dart';
+import 'package:gabungyuk/feature/auth/repository/register_repository/register_repository.dart';
 
 @immutable
 abstract class RegisterPageState {}
@@ -10,9 +10,9 @@ class InitialRegisterPageState extends RegisterPageState {}
 class RegisterPageLoading extends RegisterPageState {}
 
 class RegisterPageLoaded extends RegisterPageState {
-  final RegisterModel registerModel;
+  final FirebaseRegisterResult registerResult;
 
-  RegisterPageLoaded(this.registerModel);
+  RegisterPageLoaded(this.registerResult);
 }
 
 class RegisterPageError extends RegisterPageState {

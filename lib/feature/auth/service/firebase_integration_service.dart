@@ -3,27 +3,26 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
-import 'package:gabungyuk/feature/auth/forgot_password/set_password_for_new_google_user_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-import 'account_linking_service.dart';
+import 'firebase_auth_token_service.dart';
 
 class FirebaseIntegrationService {
   FirebaseIntegrationService._();
   static final FirebaseIntegrationService instance = FirebaseIntegrationService._();
+
+  final SharedCode _sharedCode = SharedCode();
 
   Future<void> signInWithGoogleAndSync(BuildContext context) async {
     try {
       if (kDebugMode) debugPrint('GOOGLE SIGNIN: starting');
 
       // ✅ 1. Google Sign-In
-      final GoogleSignInAccount? googleUser =
+      final GoogleSignInAccount googleUser =
           await GoogleSignIn.instance.authenticate();
 
-      if (googleUser == null) {
-        throw Exception('Login dibatalkan user');
-      }
 
       final String email = googleUser.email;
       final String fullName = googleUser.displayName ?? '';
@@ -37,7 +36,7 @@ class FirebaseIntegrationService {
 
       // ✅ 2. Sign in ke Firebase Auth
       final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+          googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null || idToken.isEmpty) {
@@ -55,37 +54,42 @@ class FirebaseIntegrationService {
         throw Exception('Firebase user tidak ditemukan');
       }
 
-
       if (kDebugMode) debugPrint('GOOGLE SIGNIN: Firebase Auth success, uid=${firebaseUser.uid}');
 
-       final existingUser = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
-       final bool hasLocalPassword = existingUser?['has_local_password'] as bool? ?? false;
-       final String provider = hasLocalPassword ? 'multi' : 'google';
+      // Check if user already exists in Firestore
+      final existingUser = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
+      final bool hasLocalPassword = existingUser?['has_local_password'] as bool? ?? false;
+      final String provider = hasLocalPassword ? 'multi' : 'google';
 
-       if (kDebugMode) {
-         debugPrint('GOOGLE SIGNIN: hasLocalPassword=$hasLocalPassword, provider=$provider');
-       }
+      if (kDebugMode) {
+        debugPrint('GOOGLE SIGNIN: hasLocalPassword=$hasLocalPassword, provider=$provider');
+      }
 
-       // ✅ 3. Sync ke Firestore
-       await FirebaseUserSyncHelper.instance.upsertUserDoc(
-         uid: firebaseUser.uid,
-         email: email,
-         fullName: fullName,
-         provider: provider,
-         googleUid: googleUid,
-         hasLocalPassword: hasLocalPassword,
-       );
+      // ✅ 3. Get Firebase ID Token
+      final firebaseIdToken = await FirebaseAuthTokenService.instance.getTokenFromGoogleSignIn();
 
-      if (kDebugMode) debugPrint('GOOGLE SIGNIN: Firestore sync success');
+      // ✅ Simpan ke SharedPreferences untuk akses API Backend
+      if (firebaseIdToken != null) {
+        await _sharedCode.saveFirebaseAuthSession(token: firebaseIdToken);
+      }
 
-      // ✅ 4. Sync ke backend manual login/register
-      await AccountLinkingService.instance.smartAccountLink(
+      // ✅ 4. Sync ke Firestore dengan token
+      await FirebaseUserSyncHelper.instance.upsertUserDoc(
+        uid: firebaseUser.uid,
         email: email,
-        googleUid: googleUid,
         fullName: fullName,
+        provider: provider,
+        googleUid: googleUid,
+        hasLocalPassword: hasLocalPassword,
+        firebaseIdToken: firebaseIdToken,
       );
 
-      if (kDebugMode) debugPrint('GOOGLE SIGNIN: backend sync success');
+      if (kDebugMode) {
+        debugPrint('GOOGLE SIGNIN: Firestore sync success');
+        if (firebaseIdToken != null) {
+          debugPrint('GOOGLE SIGNIN: Firebase ID Token saved: ${firebaseIdToken.substring(0, 20)}...');
+        }
+      }
 
       if (kDebugMode) {
         debugPrint('GOOGLE SIGNIN: hasLocalPassword=$hasLocalPassword');
@@ -93,27 +97,15 @@ class FirebaseIntegrationService {
 
       if (!context.mounted) return;
 
-      // ✅ 5. Navigation decision
-      if (!hasLocalPassword) {
-        // Belum set password → redirect ke set password screen
-        if (kDebugMode) debugPrint('GOOGLE SIGNIN: Redirecting to SetPasswordScreen');
+      // ✅ 6. Navigation: Langsung ke dashboard
+      if (kDebugMode) debugPrint('GOOGLE SIGNIN: Redirecting to Dashboard');
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                SetPasswordForNewGoogleUserScreen(email: email, googleUid: googleUid),
-          ),
-        );
-      } else {
-        // Sudah set password → langsung ke dashboard
-        if (kDebugMode) debugPrint('GOOGLE SIGNIN: Redirecting to Dashboard');
+      if (!context.mounted) return;
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const BottomNavigation()),
-        );
-      }
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const BottomNavigation()),
+        (route) => false,
+      );
     } catch (e) {
       if (kDebugMode) debugPrint('GOOGLE SIGNIN ERROR: $e');
 

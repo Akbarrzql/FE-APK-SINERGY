@@ -2,14 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:gabungyuk/core/common/api_exception.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/service/notification_service.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_state.dart';
-import 'package:gabungyuk/feature/auth/model/login_model/login_model.dart';
 import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
 
 class LoginPageBloc extends Bloc<LoginPageEvent, LoginPageState> {
   final LoginRepository loginRepository;
+  final SharedCode _sharedCode = SharedCode();
 
   LoginPageBloc({required this.loginRepository})
       : super(InitialLoginPageState()) {
@@ -23,10 +24,13 @@ class LoginPageBloc extends Bloc<LoginPageEvent, LoginPageState> {
     emit(LoginPageLoading());
 
     try {
-      final LoginModel loginModel = await loginRepository.loginUser(
+      final FirebaseLoginResult loginResult = await loginRepository.loginUser(
         email: event.email,
         password: event.password,
       );
+
+      // ✅ Simpan Firebase ID Token + exp JWT agar tidak langsung dianggap expired.
+      await _sharedCode.saveFirebaseAuthSession(token: loginResult.idToken);
 
       await NotificationService.instance.syncTokenAfterLogin(event.email);
 
@@ -37,7 +41,7 @@ class LoginPageBloc extends Bloc<LoginPageEvent, LoginPageState> {
         print('');
       }
 
-      emit(LoginPageLoaded(loginModel));
+      emit(LoginPageLoaded(loginResult));
     } catch (e) {
       if (e is ApiException) {
         emit(LoginPageError(e.message));

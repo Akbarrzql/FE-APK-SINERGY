@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
-import 'package:gabungyuk/feature/auth/service/otp_service.dart';
+import 'package:gabungyuk/feature/auth/service/firebase_password_service.dart';
 import '../../../../core/gen/assets.gen.dart';
 import '../../../core/common/auth_ui_helper.dart';
 import '../../../core/common/color_value.dart';
-import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'otp_verify_screen.dart';
 
 class OtpRequestScreen extends StatefulWidget {
@@ -26,29 +25,39 @@ class _OtpRequestScreenState extends State<OtpRequestScreen> {
     super.dispose();
   }
 
-  Future<void> _requestOtp() async {
+  Future<void> _requestReset() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
     setState(() => _isSubmitting = true);
     final email = _emailController.text.trim();
+
     try {
-      final code = await OtpService.instance.generateAndSaveOtp(email);
+      // ✅ Send Firebase password reset email
+      await FirebasePasswordService.instance.sendPasswordResetEmail(email);
 
       if (!mounted) return;
       
       AuthUiHelper.showSuccess(
         context, 
-        'Kode OTP telah dikirim ke email $email. Silakan periksa kotak masuk atau spam.'
+        'Email reset password telah dikirim ke $email. Silakan periksa kotak masuk atau spam.'
       );
 
+      // Proceed to verification screen
+      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => OtpVerifyScreen(email: email)),
       );
     } catch (e) {
       if (!mounted) return;
-      AuthUiHelper.showError(context, 'Gagal mengirim OTP. Silakan coba lagi.');
+      AuthUiHelper.showError(
+        context,
+        e.toString().replaceFirst('Exception: ', '')
+      );
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -102,7 +111,7 @@ class _OtpRequestScreenState extends State<OtpRequestScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Masukkan alamat email Anda untuk menerima\nkode verifikasi (OTP).',
+                        'Masukkan alamat email Anda untuk menerima\nlink reset password dari Firebase.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
@@ -141,7 +150,7 @@ class _OtpRequestScreenState extends State<OtpRequestScreen> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: _isSubmitting ? null : _requestOtp,
+                          onPressed: _isSubmitting ? null : _requestReset,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ColorValue.primaryColor,
                             foregroundColor: Colors.white,
@@ -161,7 +170,7 @@ class _OtpRequestScreenState extends State<OtpRequestScreen> {
                                   ),
                                 )
                               : const Text(
-                                  'Kirim Kode OTP',
+                                  'Kirim Email Reset Password',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,

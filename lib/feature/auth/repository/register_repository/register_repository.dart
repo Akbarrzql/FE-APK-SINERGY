@@ -17,9 +17,7 @@ abstract class RegisterRepository {
     required String password,
   });
 
-  Future<RegisterModel> registerGoogle({
-    required String idToken,
-  });
+  Future<RegisterModel> registerGoogle({required String idToken});
 }
 
 class RegisterRepositoryImpl implements RegisterRepository {
@@ -33,26 +31,27 @@ class RegisterRepositoryImpl implements RegisterRepository {
   }) async {
     final response = await _postRegister(
       url: Uri.parse('${ApiConfig.baseUrl}/api/v1/users/register'),
-      body: {
-        'namaLengkap': name,
-        'email': email,
-        'password': password,
-      },
+      body: {'namaLengkap': name, 'email': email, 'password': password},
       logLabel: 'Register',
     );
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final registerModel = registerModelFromJson(response.body);
+
+      // =======================================================================
+      // PERBAIKAN NULL-SAFETY & TIPE DATA: Mengganti '' menjadi 0 agar pas dengan int
+      // =======================================================================
       await _sharedCode.saveAuthSession(
-        token: registerModel.data.token,
-        expiredAt: registerModel.data.expiredAt,
+        token: registerModel.data?.token ?? '',
+        expiredAt:
+            registerModel.data?.expiredAt ?? 0, // ← SEKARANG MENJADI ANGKA 0
       );
 
       await _syncUserToFirestore(
         name: name,
         email: email,
         provider: 'email_password',
-        password: password,  // ← NEW: Save plaintext password
+        password: password, // ← NEW: Save plaintext password
       );
 
       return registerModel;
@@ -61,25 +60,34 @@ class RegisterRepositoryImpl implements RegisterRepository {
       try {
         final Map<String, dynamic> json = jsonDecode(response.body);
         if (json.containsKey('message')) {
-          message = AuthUiHelper.toIndonesianMessage(json['message'].toString());
+          message = AuthUiHelper.toIndonesianMessage(
+            json['message'].toString(),
+          );
         } else if (json.containsKey('msg')) {
           message = AuthUiHelper.toIndonesianMessage(json['msg'].toString());
         } else if (json.containsKey('details')) {
-          message = AuthUiHelper.toIndonesianMessage(json['details'].toString());
+          message = AuthUiHelper.toIndonesianMessage(
+            json['details'].toString(),
+          );
         }
       } catch (_) {
         // ignore json parse errors
       }
 
       if (response.statusCode == 400) {
-        message = message.isNotEmpty ? message : 'Permintaan tidak valid. Periksa kembali input.';
+        message = message.isNotEmpty
+            ? message
+            : 'Permintaan tidak valid. Periksa kembali input.';
       } else if (response.statusCode == 401) {
         message = 'Sesi Anda telah berakhir. Silakan masuk kembali.';
       } else if (response.statusCode >= 500) {
         message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
       }
 
-      throw ApiException(AuthUiHelper.toIndonesianMessage(message), response.statusCode);
+      throw ApiException(
+        AuthUiHelper.toIndonesianMessage(message),
+        response.statusCode,
+      );
     }
   }
 
@@ -93,9 +101,14 @@ class RegisterRepositoryImpl implements RegisterRepository {
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final registerModel = registerModelFromJson(response.body);
+
+      // =======================================================================
+      // PERBAIKAN NULL-SAFETY & TIPE DATA: Mengganti '' menjadi 0 agar pas dengan int
+      // =======================================================================
       await _sharedCode.saveAuthSession(
-        token: registerModel.data.token,
-        expiredAt: registerModel.data.expiredAt,
+        token: registerModel.data?.token ?? '',
+        expiredAt:
+            registerModel.data?.expiredAt ?? 0, // ← SEKARANG MENJADI ANGKA 0
       );
 
       return registerModel;
@@ -116,14 +129,19 @@ class RegisterRepositoryImpl implements RegisterRepository {
     }
 
     if (response.statusCode == 400) {
-      message = message.isNotEmpty ? message : 'Permintaan tidak valid. Periksa kembali input.';
+      message = message.isNotEmpty
+          ? message
+          : 'Permintaan tidak valid. Periksa kembali input.';
     } else if (response.statusCode == 401) {
       message = 'Sesi Anda telah berakhir. Silakan masuk kembali.';
     } else if (response.statusCode >= 500) {
       message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
     }
 
-    throw ApiException(AuthUiHelper.toIndonesianMessage(message), response.statusCode);
+    throw ApiException(
+      AuthUiHelper.toIndonesianMessage(message),
+      response.statusCode,
+    );
   }
 
   Future<http.Response> _postRegister({
@@ -134,18 +152,16 @@ class RegisterRepositoryImpl implements RegisterRepository {
     return http
         .post(
           url,
-          headers: {
-            HttpHeaders.contentTypeHeader: 'application/json',
-          },
+          headers: {HttpHeaders.contentTypeHeader: 'application/json'},
           body: jsonEncode(body),
         )
         .then((response) {
-      if (kDebugMode) {
-        print('$logLabel response status: ${response.statusCode}');
-        print('$logLabel response body: ${response.body}');
-      }
-      return response;
-    });
+          if (kDebugMode) {
+            print('$logLabel response status: ${response.statusCode}');
+            print('$logLabel response body: ${response.body}');
+          }
+          return response;
+        });
   }
 
   Future<void> _syncUserToFirestore({
@@ -155,8 +171,14 @@ class RegisterRepositoryImpl implements RegisterRepository {
     String? password,
   }) async {
     try {
-      final existing = await FirebaseUserSyncHelper.instance.findUserByEmail(email);
-      final uid = existing == null ? email : (existing['uid']?.toString().isNotEmpty == true ? existing['uid'].toString() : email);
+      final existing = await FirebaseUserSyncHelper.instance.findUserByEmail(
+        email,
+      );
+      final uid = existing == null
+          ? email
+          : (existing['uid']?.toString().isNotEmpty == true
+                ? existing['uid'].toString()
+                : email);
 
       final hashedPassword = password != null
           ? FirebaseUserSyncHelper.instance.hashPassword(password)
@@ -169,7 +191,7 @@ class RegisterRepositoryImpl implements RegisterRepository {
         provider: provider,
         hasLocalPassword: true,
         localPassword: hashedPassword,
-        plainPassword: password,  // ← NEW: Save plaintext password
+        plainPassword: password, // ← NEW: Save plaintext password
       );
     } catch (e) {
       if (kDebugMode) {

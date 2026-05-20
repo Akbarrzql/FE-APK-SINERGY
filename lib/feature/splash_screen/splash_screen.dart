@@ -26,9 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (token.isEmpty) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const OnboardingPage(),
-        ),
+        MaterialPageRoute(builder: (context) => const OnboardingPage()),
       );
       return;
     }
@@ -41,18 +39,14 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
       return;
     }
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (context) => const BottomNavigation(),
-      ),
+      MaterialPageRoute(builder: (context) => const BottomNavigation()),
     );
   }
 

@@ -1,34 +1,39 @@
-// To parse this JSON data, do
-//
-//     final registerModel = registerModelFromJson(jsonString);
-
 import 'dart:convert';
 
-RegisterModel registerModelFromJson(String str) => RegisterModel.fromJson(json.decode(str));
+RegisterModel registerModelFromJson(String str) =>
+    RegisterModel.fromJson(json.decode(str));
 
 String registerModelToJson(RegisterModel data) => json.encode(data.toJson());
 
 class RegisterModel {
-  int status;
-  String message;
-  Data data;
+  int? status;
+  String? message;
+  String? error;
+  String? details;
+  Data? data;
 
   RegisterModel({
-    required this.status,
-    required this.message,
-    required this.data,
+    this.status,
+    this.message,
+    this.error,
+    this.details,
+    this.data,
   });
 
   factory RegisterModel.fromJson(Map<String, dynamic> json) => RegisterModel(
     status: json["status"],
     message: json["message"],
-    data: Data.fromJson(json["data"]),
+    error: json["error"],
+    details: json["details"],
+    data: json["data"] != null ? Data.fromJson(json["data"]) : null,
   );
 
   Map<String, dynamic> toJson() => {
     "status": status,
     "message": message,
-    "data": data.toJson(),
+    "error": error,
+    "details": details,
+    "data": data?.toJson(),
   };
 }
 
@@ -39,14 +44,14 @@ class Data {
   int expiredAt;
   String namaLengkap;
   dynamic profilePicture;
-  String institusi;
-  String bio;
-  List<String> keahlian;
-  String lokasi;
-  String whatsapp;
-  String instagram;
-  String facebook;
-  String linkedin;
+  String? institusi;
+  String? bio;
+  List<String>? keahlian;
+  String? lokasi;
+  String? whatsapp;
+  String? instagram;
+  String? facebook;
+  String? linkedin;
 
   Data({
     required this.userId,
@@ -55,14 +60,14 @@ class Data {
     required this.expiredAt,
     required this.namaLengkap,
     required this.profilePicture,
-    required this.institusi,
-    required this.bio,
-    required this.keahlian,
-    required this.lokasi,
-    required this.whatsapp,
-    required this.instagram,
-    required this.facebook,
-    required this.linkedin,
+    this.institusi,
+    this.bio,
+    this.keahlian,
+    this.lokasi,
+    this.whatsapp,
+    this.instagram,
+    this.facebook,
+    this.linkedin,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -74,7 +79,9 @@ class Data {
     profilePicture: json["profilePicture"],
     institusi: json["institusi"],
     bio: json["bio"],
-    keahlian: List<String>.from(json["keahlian"].map((x) => x)),
+    keahlian: json["keahlian"] != null
+        ? List<String>.from(json["keahlian"].map((x) => x))
+        : null,
     lokasi: json["lokasi"],
     whatsapp: json["whatsapp"],
     instagram: json["instagram"],
@@ -91,7 +98,9 @@ class Data {
     "profilePicture": profilePicture,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": List<dynamic>.from(keahlian.map((x) => x)),
+    "keahlian": keahlian != null
+        ? List<dynamic>.from(keahlian!.map((x) => x))
+        : null,
     "lokasi": lokasi,
     "whatsapp": whatsapp,
     "instagram": instagram,

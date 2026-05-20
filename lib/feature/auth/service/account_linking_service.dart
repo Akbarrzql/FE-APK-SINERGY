@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/feature/auth/repository/login_repository/login_repository.dart';
 import 'package:gabungyuk/feature/auth/repository/register_repository/register_repository.dart';
+
+import 'firebase_auth_token_service.dart';
 
 /// 🔗 Account Linking Service
 ///
@@ -97,76 +100,24 @@ class AccountLinkingService {
 
        // 🔑 Key decision: Apakah sudah ada local password?
        if (hasLocalPassword) {
-         // User sudah set password lokal - backend password sudah diganti
-         // Gunakan plaintext password dari Firestore untuk backend login
-         if (plainPassword.isNotEmpty) {
-           if (kDebugMode) {
-             debugPrint(
-                 'ACCOUNT LINKING: user has local password, attempting backend login with stored password');
-           }
-
-           try {
-             final backendLogin = await _loginRepo.loginUser(
-               email: email,
-               password: plainPassword,
-             );
-             if (kDebugMode) {
-               debugPrint('ACCOUNT LINKING: backend login success with stored password');
-               debugPrint(
-                   'ACCOUNT LINKING: backend token=${backendLogin.data.token}');
-             }
-           } on ApiException catch (e) {
-             if (kDebugMode) {
-               debugPrint(
-                   'ACCOUNT LINKING: backend login failed with stored password (status=${e.statusCode}): $e');
-             }
-             // If login fails, just skip - account already exists
-             // This is safer than trying to register
-           }
-         } else {
-           // Plaintext password not found in Firestore, just skip
-           if (kDebugMode) {
-             debugPrint(
-                 'ACCOUNT LINKING: user has local password but plaintext not in Firestore, skipping backend login');
-           }
+         // User sudah set password lokal.
+         // Kita tidak perlu login ulang dengan password manual karena kita sudah 
+         // masuk via Google. Kita cukup pastikan ID Token tersedia untuk backend.
+         if (kDebugMode) {
+           debugPrint('ACCOUNT LINKING: user has local password, skipping redundant backend login');
          }
        } else {
-         // Belum ada local password, coba login/register dengan googleSecret
-         final googleSecret =
-             FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
-
+         // Belum ada local password.
+         // Jika user ini benar-benar baru di Firebase Auth (belum ada akun sama sekali),
+         // kita bisa mendaftarkannya dengan googleSecret. 
+         // Tapi karena kita sudah di level 'linkGoogleToExisting', berarti akun sudah ada.
          if (kDebugMode) {
-           debugPrint(
-               'ACCOUNT LINKING: attempting backend login with googleSecret');
-         }
-
-         // Coba login ke backend manual dulu. Jika akun belum ada, register.
-         try {
-           final backendLogin = await _loginRepo.loginUser(
-             email: email,
-             password: googleSecret,
-           );
-           if (kDebugMode) {
-             debugPrint('ACCOUNT LINKING: backend manual login success for $email');
-             debugPrint(
-                 'ACCOUNT LINKING: backend token=${backendLogin.data.token}');
-           }
-         } on ApiException catch (e) {
-           if (e.statusCode == 401 || e.statusCode == 404) {
-             if (kDebugMode) {
-               debugPrint(
-                   'ACCOUNT LINKING: backend account not found (status=${e.statusCode}), registering via manual endpoint');
-             }
-             await _registerRepo.registerUser(
-               name: fullName,
-               email: email,
-               password: googleSecret,
-             );
-           } else {
-             rethrow;
-           }
+           debugPrint('ACCOUNT LINKING: linking Google to account without local password');
          }
        }
+
+       // ✅ Ambil Token terbaru untuk memastikan sinkronisasi
+       final currentToken = await FirebaseAuthTokenService.instance.getCurrentIdToken();
 
        // ✅ Update Firestore to mark as multi-provider (if has local password)
        // or keep existing provider
@@ -179,6 +130,7 @@ class AccountLinkingService {
          hasLocalPassword: hasLocalPassword,
          localPassword: localPasswordHash.isNotEmpty ? localPasswordHash : null,
          plainPassword: plainPassword.isNotEmpty ? plainPassword : null,
+         firebaseIdToken: currentToken,
        );
 
       if (kDebugMode) {
@@ -207,14 +159,24 @@ class AccountLinkingService {
       }
       final googleSecret = FirebaseUserSyncHelper.instance.deriveGoogleSecret(googleUid);
 
-      await _registerRepo.registerUser(
-        name: fullName,
+      // Kita tidak perlu mendaftar ulang ke Firebase Auth via RegisterRepo
+      // karena saat ini kita SUDAH masuk via Google Auth di Firebase.
+      // Cukup sync profil ke Firestore.
+      
+      final currentToken = await FirebaseAuthTokenService.instance.getCurrentIdToken();
+
+      await FirebaseUserSyncHelper.instance.upsertUserDoc(
+        uid: FirebaseAuth.instance.currentUser?.uid ?? '',
         email: email,
-        password: googleSecret,
+        fullName: fullName,
+        provider: 'google',
+        googleUid: googleUid,
+        hasLocalPassword: false,
+        firebaseIdToken: currentToken,
       );
 
       if (kDebugMode) {
-        debugPrint('ACCOUNT LINKING: backend Google registration successful for $email');
+        debugPrint('ACCOUNT LINKING: Firestore Google registration successful for $email');
       }
     } catch (e) {
       if (kDebugMode) {

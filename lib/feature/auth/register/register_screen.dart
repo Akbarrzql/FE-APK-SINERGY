@@ -1,17 +1,14 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
-import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../forgot_password/reset_password_screen.dart';
 
 import '../../../../core/gen/assets.gen.dart';
 import '../../../../core/gen/fonts.gen.dart';
 import '../../../core/common/shared_code.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../service/firebase_integration_service.dart';
 import '../../../core/widget/bottom_navigation.dart';
 import '../login/login_screen.dart';
@@ -48,20 +45,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Create Firebase account safely without awaiting; ignore errors (account may already exist)
-  void _safeFirebaseCreateUser(String email, String password) {
-    () async {
-      try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      } catch (e) {
-        if (kDebugMode) debugPrint('SAFE FIREBASE CREATE IGNORED: $e');
-      }
-    }();
-  }
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -80,20 +63,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         body: BlocConsumer<RegisterPageBloc, RegisterPageState>(
           listener: (context, state) {
             if (state is RegisterPageLoaded) {
-               FocusManager.instance.primaryFocus?.unfocus();
+              FocusManager.instance.primaryFocus?.unfocus();
 
-               // Try to create Firebase account with same credentials so Firebase
-               // is in sync. If it fails (account already exists) we ignore and
-               // continue because backend registration already succeeded.
-               _safeFirebaseCreateUser(_emailController.text.trim(), _passwordController.text);
-
-               Navigator.pushReplacement(
-                 context,
-                 MaterialPageRoute(
-                   builder: (context) => const BottomNavigation(),
-                 ),
-               );
-             } else if (state is RegisterPageError) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BottomNavigation(),
+                ),
+              );
+            } else if (state is RegisterPageError) {
               AuthUiHelper.showError(context, state.errorMessage);
             }
           },
@@ -200,7 +178,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text('Lupa Password?', style: TextStyle(color: Color(0xFF2F80ED))),
+                      child: const Text(
+                        'Lupa Password?',
+                        style: TextStyle(color: Color(0xFF2F80ED)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -214,12 +195,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               FocusManager.instance.primaryFocus?.unfocus();
                               if (_formKey.currentState!.validate()) {
                                 context.read<RegisterPageBloc>().add(
-                                      RegisterButtonPressed(
-                                        name: _nameController.text.trim(),
-                                        email: _emailController.text.trim(),
-                                        password: _passwordController.text,
-                                      ),
-                                    );
+                                  RegisterButtonPressed(
+                                    name: _nameController.text.trim(),
+                                    email: _emailController.text.trim(),
+                                    password: _passwordController.text,
+                                  ),
+                                );
                               }
                             },
                       style: ElevatedButton.styleFrom(
@@ -236,8 +217,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -255,7 +237,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
-
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: const BorderSide(
@@ -272,8 +253,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.black),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.black,
+                                ),
                               ),
                             )
                           : const Row(
@@ -294,18 +276,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ? null
                           : () async {
                               try {
-                                await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
+                                await FirebaseIntegrationService.instance
+                                    .signInWithGoogleAndSync(context);
                               } catch (e) {
                                 AuthUiHelper.showError(
                                   context,
                                   AuthUiHelper.readableError(
                                     e,
-                                    fallback: 'Gagal masuk dengan Google. Silakan coba lagi.',
+                                    fallback:
+                                        'Gagal masuk dengan Google. Silakan coba lagi.',
                                   ),
                                 );
                               }
                             },
-                    )
+                    ),
                   ),
                   const SizedBox(height: 40),
                   Row(
@@ -403,41 +387,25 @@ class _AuthTextField extends StatelessWidget {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: borderColor,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: borderColor, width: 1.2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: borderColor,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: borderColor, width: 1.2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color(0xFF2F80ED),
-            width: 1.4,
-          ),
+          borderSide: const BorderSide(color: Color(0xFF2F80ED), width: 1.4),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 1.2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 1.2),
         ),
       ),
     );
   }
 }
-

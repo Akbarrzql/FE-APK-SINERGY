@@ -79,9 +79,9 @@ class Data {
     profilePicture: json["profilePicture"],
     institusi: json["institusi"],
     bio: json["bio"],
-    keahlian: json["keahlian"] != null
-        ? List<String>.from(json["keahlian"].map((x) => x))
-        : null,
+    keahlian: json["keahlian"] == null
+        ? null
+        : List<String>.from(json["keahlian"].map((x) => x)),
     lokasi: json["lokasi"],
     whatsapp: json["whatsapp"],
     instagram: json["instagram"],
@@ -98,9 +98,9 @@ class Data {
     "profilePicture": profilePicture,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": keahlian != null
-        ? List<dynamic>.from(keahlian!.map((x) => x))
-        : null,
+    "keahlian": keahlian == null
+        ? null
+        : List<dynamic>.from(keahlian!.map((x) => x)),
     "lokasi": lokasi,
     "whatsapp": whatsapp,
     "instagram": instagram,

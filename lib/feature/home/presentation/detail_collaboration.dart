@@ -685,7 +685,8 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
             // ── Join Button ────────────────────────────────────────────────
-            if (widget.owner?.idPengguna != widget.project.owner.id)
+            if (widget.owner?.idPengguna != widget.project.owner.id &&
+                _collaborationModel?.data?.status?.toUpperCase() != 'ACCEPTED')
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -80,6 +82,36 @@ class SharedCode {
     final tokenSaved = await prefs.setString(authTokenKey, token);
     final expiredSaved = await prefs.setInt(authTokenExpiredAtKey, expiredAt);
     return tokenSaved && expiredSaved;
+  }
+
+  int? _extractJwtExp(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final Map<String, dynamic> json = jsonDecode(payload);
+      final exp = json['exp'];
+      if (exp is int) return exp;
+      if (exp is String) return int.tryParse(exp);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> saveFirebaseAuthSession({
+    required String token,
+  }) async {
+    final expFromToken = _extractJwtExp(token);
+    // Fallback 55 menit agar session checker tidak langsung menganggap expired.
+    final fallbackExpSeconds =
+        DateTime.now().add(const Duration(minutes: 55)).millisecondsSinceEpoch ~/ 1000;
+
+    return saveAuthSession(
+      token: token,
+      expiredAt: expFromToken ?? fallbackExpSeconds,
+    );
   }
 
   Future<String> getAuthToken() async {

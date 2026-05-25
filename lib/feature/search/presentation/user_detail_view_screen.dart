@@ -1,52 +1,170 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/common/api_exception.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
-import 'package:gabungyuk/feature/search/model/screen_model.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
+import 'package:gabungyuk/feature/profile/model/profile_model.dart';
+import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
+import 'package:gabungyuk/feature/profile/presentation/widgets/profile_header.dart';
+import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
 class UserDetailViewScreen extends StatefulWidget {
-  final User user;
+  final int userId;
 
   const UserDetailViewScreen({
     super.key,
-    required this.user,
+    required this.userId,
   });
 
   @override
-  State<UserDetailViewScreen> createState() => _UserDetailViewScreenState();
+  State<UserDetailViewScreen> createState() =>
+      _UserDetailViewScreenState();
 }
 
-class _UserDetailViewScreenState extends State<UserDetailViewScreen> {
-  late TextEditingController _nameController;
-  late TextEditingController _bioController;
-  late TextEditingController _institusiController;
+class _UserDetailViewScreenState
+    extends State<UserDetailViewScreen> {
+  final ProfileRepository _profileRepository =
+  ProfileRepositoryImpl();
+
+  late Future<ViewProfileModel> _profileFuture;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.user.namaLengkap ?? '');
-    _bioController = TextEditingController(text: widget.user.bio ?? '');
-    _institusiController = TextEditingController(text: widget.user.institusi ?? '');
+
+    _profileFuture =
+        _profileRepository.getViewProfileById(
+          widget.userId,
+        );
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _bioController.dispose();
-    _institusiController.dispose();
-    super.dispose();
+  Future<void> _reload() async {
+    setState(() {
+      _profileFuture =
+          _profileRepository.getViewProfileById(
+            widget.userId,
+          );
+    });
+  }
+
+  Widget _buildShimmerHeader() {
+    return SingleChildScrollView(
+      physics:
+      const AlwaysScrollableScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 20,
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                LoadingShimmer.circle(size: 70),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+                      LoadingShimmer(
+                        height: 18,
+                        width: 150,
+                      ),
+                      const SizedBox(height: 8),
+                      LoadingShimmer(
+                        height: 14,
+                        width: 120,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            LoadingShimmer(
+              height: 12,
+              width: double.infinity,
+            ),
+
+            const SizedBox(height: 8),
+
+            LoadingShimmer(
+              height: 12,
+              width: double.infinity,
+            ),
+
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(
+                  child: LoadingShimmer(
+                    height: 45,
+                    width: double.infinity,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: LoadingShimmer(
+                    height: 45,
+                    width: double.infinity,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: LoadingShimmer(
+                    height: 45,
+                    width: double.infinity,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: LoadingShimmer(
+                    height: 45,
+                    width: double.infinity,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ProfileModel _mapToProfileModel(
+      ViewProfileModel profile,
+      ) {
+    return ProfileModel(
+      idPengguna: profile.idPengguna,
+      namaLengkap: profile.namaLengkap,
+      email: profile.email,
+      bio: profile.bio,
+      lokasi: profile.lokasi,
+      institusi: profile.institusi,
+      profilePicture: profile.profilePicture,
+      keahlian: profile.keahlian,
+      instagram: profile.instagram,
+      linkedin: profile.linkedin,
+      facebook: profile.facebook,
+      whatsapp: profile.whatsapp,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final profileImageUrl = widget.user.profilePicture?.toString() ?? '';
-
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: const Icon(
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(
             Icons.arrow_back,
             color: ColorValue.textPrimary,
           ),
@@ -54,228 +172,113 @@ class _UserDetailViewScreenState extends State<UserDetailViewScreen> {
         title: const Text(
           'Profil Pengguna',
           style: TextStyle(
+            color: ColorValue.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: ColorValue.textPrimary,
           ),
         ),
-        centerTitle: false,
       ),
+
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Profile Picture
-                Center(
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: ColorValue.borderColor,
-                        width: 2,
+        child: FutureBuilder<ViewProfileModel>(
+          future: _profileFuture,
+          builder: (context, snapshot) {
+            /// LOADING
+            if (snapshot.connectionState ==
+                ConnectionState.waiting) {
+              return _buildShimmerHeader();
+            }
+
+            /// ERROR
+            if (snapshot.hasError) {
+              final message =
+              snapshot.error is ApiException
+                  ? (snapshot.error
+              as ApiException)
+                  .message
+                  : 'Gagal memuat profil pengguna';
+
+              return Center(
+                child: Padding(
+                  padding:
+                  const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment:
+                    MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 70,
+                        color: Colors.red
+                            .withValues(alpha: 0.5),
                       ),
-                    ),
-                    child: profileImageUrl.isEmpty
-                        ? const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 60,
-                          )
-                        : ClipOval(
-                            child: Image.network(
-                              profileImageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 60,
-                              ),
-                            ),
-                          ),
+
+                      const SizedBox(height: 18),
+
+                      Text(
+                        message,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: ColorValue
+                              .textSecondary,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      ElevatedButton(
+                        onPressed: _reload,
+                        child:
+                        const Text('Coba Lagi'),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 32),
+              );
+            }
 
-                // Nama Lengkap Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            /// EMPTY
+            if (!snapshot.hasData) {
+              return const SizedBox.shrink();
+            }
+
+            /// SUCCESS
+            final profile = snapshot.data!;
+
+            return RefreshIndicator(
+              onRefresh: _reload,
+              child: SingleChildScrollView(
+                physics:
+                const AlwaysScrollableScrollPhysics(),
+                child: Column(
                   children: [
-                    const Text(
-                      'Nama Lengkap',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: ColorValue.textPrimary,
+                    /// HEADER PROFILE
+                    Padding(
+                      padding:
+                      const EdgeInsets.all(20),
+                      child: ProfileHeader(
+                        profile:
+                        _mapToProfileModel(
+                          profile,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _nameController,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        hintText: 'Masukkan nama lengkap',
-                        hintStyle: const TextStyle(
-                          color: ColorValue.textSecondary,
-                          fontSize: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: ColorValue.borderColor,
-                            width: 1.2,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: ColorValue.borderColor,
-                            width: 1.2,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2F80ED),
-                            width: 1.4,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.all(12),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                      ),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: ColorValue.textPrimary,
-                      ),
+
+                    /// SEPARATOR
+                    Container(
+                      height: 8,
+                      color: Colors.grey.shade100,
                     ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
-                const SizedBox(height: 20),
-
-                // Institusi Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Institusi',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: ColorValue.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _institusiController,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        hintText: 'Masukkan institusi',
-                        hintStyle: const TextStyle(
-                          color: ColorValue.textSecondary,
-                          fontSize: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: ColorValue.borderColor,
-                            width: 1.2,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: ColorValue.borderColor,
-                            width: 1.2,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2F80ED),
-                            width: 1.4,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.all(12),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                      ),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: ColorValue.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Bio Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Bio',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: ColorValue.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _bioController,
-                      readOnly: true,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        hintText: 'Masukkan bio',
-                        hintStyle: const TextStyle(
-                          color: ColorValue.textSecondary,
-                          fontSize: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: ColorValue.borderColor,
-                            width: 1.2,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: ColorValue.borderColor,
-                            width: 1.2,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2F80ED),
-                            width: 1.4,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.all(12),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                      ),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: ColorValue.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
-

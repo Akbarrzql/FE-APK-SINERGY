@@ -11,7 +11,7 @@ class CollaborationData {
   final String? id;
   final String title;
   final String description;
-  final String category;
+  final List<String> category;
   final String status;
   final String repositoryLink;
   final String? imageUrl;
@@ -42,6 +42,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   late final TextEditingController _descController;
   late final TextEditingController _categoryController;
   late final TextEditingController _repoController;
+  final List<String> _selectedCategories = [];
 
   late String _selectedStatus;
   String? _newImagePath; // path lokal jika user ganti gambar
@@ -59,7 +60,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     title: 'Moneyger Application Project',
     description:
     'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah. Aplikasi ini juga menawarkan berbagai fitur yang dapat membantu masyarakat mempermudah produktivitas mereka.',
-    category: 'Portofolio project',
+    category: ['Portofolio project'],
     status: 'Sedang Berjalan',
     repositoryLink: 'https://github.com/example/moneyger',
     imageUrl:
@@ -72,7 +73,8 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     final data = widget.initialData ?? _dummy;
     _titleController = TextEditingController(text: data.title);
     _descController = TextEditingController(text: data.description);
-    _categoryController = TextEditingController(text: data.category);
+    _categoryController = TextEditingController();
+    _selectedCategories.addAll(data.category);
     _repoController = TextEditingController(text: data.repositoryLink);
     _selectedStatus = _mapBackendStatus(data.status);
     _existingImageUrl = data.imageUrl;
@@ -113,6 +115,15 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    if (_categoryController.text.trim().isNotEmpty) {
+      _addCategory(_categoryController.text);
+    }
+
+    if (_selectedCategories.isEmpty) {
+      AuthUiHelper.showError(context, 'Kategori wajib diisi.');
+      return;
+    }
+
     final id = widget.initialData?.id;
     if (id == null) {
       // If no id provided, inform user and abort.
@@ -135,7 +146,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         id: id,
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
-        category: _categoryController.text.trim(),
+        category: _selectedCategories,
         status: _mapToBackendStatus(_selectedStatus),
         repositoryLink: _repoController.text.trim(),
         imagePath: _newImagePath,
@@ -337,13 +348,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                       // Kategori
                       _buildLabel('Kategori'),
                       const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _categoryController,
-                        hint: 'Tambahkan Kategori',
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Kategori wajib diisi'
-                            : null,
-                      ),
+                      _buildCategoryInput(),
 
                       const SizedBox(height: 16),
 
@@ -508,6 +513,117 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildCategoryInput() {
+    final categories = [
+      'Web Development',
+      'UI/UX Design',
+      'Mobile Dev',
+      'Back End',
+      'Data Science',
+      'Data Analyst',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ..._selectedCategories.map(
+                (cat) => Chip(
+                  label: Text(cat),
+                  onDeleted: () => setState(() => _selectedCategories.remove(cat)),
+                  backgroundColor: ColorValue.primaryColor.withValues(alpha: 0.1),
+                  deleteIcon: Icon(Icons.cancel, size: 16, color: ColorValue.primaryColor.withValues(alpha: 0.7)),
+                  labelStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: ColorValue.primaryColor,
+                  ),
+                ),
+              ),
+              IntrinsicWidth(
+                child: TextField(
+                  controller: _categoryController,
+                  style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: _selectedCategories.isEmpty ? 'Ketik lalu tekan enter' : null,
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  onChanged: (value) {
+                    if (value.isNotEmpty && (value.endsWith(' ') || value.endsWith(','))) {
+                      _addCategory(value.substring(0, value.length - 1));
+                    }
+                  },
+                  onSubmitted: _addCategory,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: categories.map((cat) {
+            final isSelected = _selectedCategories.contains(cat);
+            return ChoiceChip(
+              label: Text(cat),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    if (!_selectedCategories.contains(cat)) _selectedCategories.add(cat);
+                  } else {
+                    _selectedCategories.remove(cat);
+                  }
+                });
+              },
+              selectedColor: ColorValue.primaryColor.withValues(alpha: 0.1),
+              backgroundColor: Colors.white,
+              labelStyle: TextStyle(
+                fontSize: 12,
+                color: isSelected ? ColorValue.primaryColor : Colors.grey[600],
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected ? ColorValue.primaryColor : Colors.grey[300]!,
+                ),
+              ),
+              showCheckmark: false,
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _addCategory(String value) {
+    final clean = value.trim();
+    if (clean.isEmpty) {
+      _categoryController.clear();
+      return;
+    }
+    if (!_selectedCategories.contains(clean)) {
+      setState(() => _selectedCategories.add(clean));
+    }
+    _categoryController.clear();
   }
 
   Widget _buildStatusDropdown() {

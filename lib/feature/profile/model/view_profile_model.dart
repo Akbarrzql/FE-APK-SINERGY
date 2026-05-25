@@ -36,7 +36,9 @@ class ViewProfileModel {
   factory ViewProfileModel.fromJson(Map<String, dynamic> json) {
     final data = json["data"] != null ? json["data"] : json;
     return ViewProfileModel(
-      idPengguna: data["idPengguna"] ?? 0,
+      idPengguna: data["idPengguna"] is int
+          ? data["idPengguna"]
+          : int.tryParse(data["idPengguna"]?.toString() ?? data["id"]?.toString() ?? '0') ?? 0,
       profilePicture: data["profilePicture"]?.toString() ?? '',
       namaLengkap: data["namaLengkap"] ?? '',
       email: data["email"] ?? '',

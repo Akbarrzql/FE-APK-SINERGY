@@ -17,7 +17,12 @@ import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool hideMenus;
+
+  const ProfileScreen({
+    super.key,
+    this.hideMenus = false,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -107,78 +112,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           Container(height: 8, color: Colors.grey.shade100),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // 2. Navigasi ke EditProfileScreen ditambahkan di sini
-                _menuItem(Icons.person_outline, 'Informasi pribadi', () async {
-                  // Pass current profile if loaded
-                  final state = _profileBloc.state;
-                  ProfileModel? p;
-                  if (state is ProfileLoaded) p = state.profile;
+          if (!widget.hideMenus)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // ...existing code...
+                  _menuItem(Icons.person_outline, 'Informasi pribadi', () async {
+                    // Pass current profile if loaded
+                    final state = _profileBloc.state;
+                    ProfileModel? p;
+                    if (state is ProfileLoaded) p = state.profile;
 
-                  final result = await Navigator.push<bool?>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BlocProvider.value(
-                        value: _profileBloc,
-                        child: EditProfileScreen(profile: p),
+                    final result = await Navigator.push<bool?>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BlocProvider.value(
+                          value: _profileBloc,
+                          child: EditProfileScreen(profile: p),
+                        ),
                       ),
-                    ),
-                  );
+                    );
 
-                  // If edit screen signalled an update, reload profile immediately
-                  if (result == true) {
-                    _profileBloc.add(LoadProfile());
-                  }
-                }),
-                 const SizedBox(height: 2),
-                 _menuItem(Icons.lock_open_rounded, 'Reset Password', () async {
-                   final result = await Navigator.push<bool?>(
-                     context,
-                     MaterialPageRoute(
-                       builder: (context) => const EditPasswordScreen(),
-                     ),
-                   );
+                    // If edit screen signalled an update, reload profile immediately
+                    if (result == true) {
+                      _profileBloc.add(LoadProfile());
+                    }
+                  }),
+                   const SizedBox(height: 2),
+                   _menuItem(Icons.lock_open_rounded, 'Reset Password', () async {
+                     final result = await Navigator.push<bool?>(
+                       context,
+                       MaterialPageRoute(
+                         builder: (context) => const EditPasswordScreen(),
+                       ),
+                     );
 
-                   if (result == true) {
-                     _profileBloc.add(LoadProfile());
-                   }
-                 }),
-                 const SizedBox(height: 2),
-                _menuItem(Icons.logout, 'Keluar', () async {
-                  final confirm = await AuthUiHelper.showAppDialog<bool>(
-                    context: context,
-                    title: 'Konfirmasi',
-                    content: const Text(
-                      'Anda yakin ingin keluar dari akun?',
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: Color(0xFF555555),
+                     if (result == true) {
+                       _profileBloc.add(LoadProfile());
+                     }
+                   }),
+                   const SizedBox(height: 2),
+                  _menuItem(Icons.logout, 'Keluar', () async {
+                    final confirm = await AuthUiHelper.showAppDialog<bool>(
+                      context: context,
+                      title: 'Konfirmasi',
+                      content: const Text(
+                        'Anda yakin ingin keluar dari akun?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: Color(0xFF555555),
+                        ),
                       ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: Text('Batal', style: TextStyle(color: ColorValue.primaryColor)),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                        child: const Text('Keluar'),
-                      ),
-                    ],
-                  );
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: Text('Batal', style: TextStyle(color: ColorValue.primaryColor)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          child: const Text('Keluar'),
+                        ),
+                      ],
+                    );
 
-                  if (confirm == true) {
-                    await AuthSessionManager.instance.forceLogout();
-                  }
-                }, isLogout: true),
-              ],
+                    if (confirm == true) {
+                      await AuthSessionManager.instance.forceLogout();
+                    }
+                  }, isLogout: true),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

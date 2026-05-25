@@ -177,7 +177,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? ColorValue.primaryColor.withOpacity(0.1) : Colors.transparent,
+              color: isSelected ? ColorValue.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -238,7 +238,9 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
   Widget _buildProjectCard(dynamic project, bool isOwned) {
     final String title = (project is OwnedProject) ? (project.title ?? "") : (project["title"] ?? "");
     final String description = (project is OwnedProject) ? (project.description ?? "") : (project["description"] ?? "");
-    final String category = (project is OwnedProject) ? (project.category ?? "") : (project["category"] ?? "");
+    final List<String> category = (project is OwnedProject)
+        ? (project.category.isNotEmpty ? project.category : const [])
+        : List<String>.from(project["category"] is List ? project["category"] : []);
     final String statusLabel = (project is OwnedProject) ? (project.status ?? "") : (project["status"] ?? "");
     final int id = (project is OwnedProject) ? (project.id ?? 0) : (project["id"] ?? 0);
 
@@ -303,7 +305,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           border: Border.all(color: Colors.grey.shade100),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -317,8 +319,8 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey[100],
-                  backgroundImage: (ownerImage != null && ownerImage!.isNotEmpty) ? NetworkImage(ownerImage!) : null,
-                  child: (ownerImage == null || ownerImage!.isEmpty) ? const Icon(Icons.person, size: 20, color: Colors.blue) : null,
+                  backgroundImage: ownerImage != null && ownerImage.isNotEmpty ? NetworkImage(ownerImage) : null,
+                  child: ownerImage == null || ownerImage.isEmpty ? const Icon(Icons.person, size: 20, color: Colors.blue) : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -340,7 +342,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -360,15 +362,27 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: ColorValue.textPrimary),
             ),
             const SizedBox(height: 4),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text(
-                  category,
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                ),
-                const SizedBox(width: 8),
-                const Text('•', style: TextStyle(color: Colors.grey)),
-                const SizedBox(width: 8),
+                ...((category.isNotEmpty) ? category : const ['General'])
+                    .map((item) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: ColorValue.primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            item,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: ColorValue.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        )),
                 Text(
                   '12 Maret 2023',
                   style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
@@ -388,9 +402,11 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
               children: [
                 Row(
                   children: [
-                    _buildTag(category),
-                    const SizedBox(width: 8),
-                    _buildTag('General'),
+                    ...(category.isNotEmpty ? category : const ['General'])
+                        .map((item) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _buildTag(item),
+                            )),
                   ],
                 ),
                 MemberAvatarsWidget(projectId: id),
@@ -443,7 +459,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: ColorValue.primaryColor.withOpacity(0.08),
+        color: ColorValue.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

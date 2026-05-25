@@ -4,122 +4,111 @@ import 'package:gabungyuk/feature/search/model/screen_model.dart';
 
 class SearchUserCard extends StatelessWidget {
   final User user;
+  final VoidCallback? onTap;
 
   const SearchUserCard({
     super.key,
     required this.user,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final profileImageUrl = user.profilePicture?.toString() ?? '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: ColorValue.borderColor,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Profile Picture
-          Container(
-            width: 56,
-            height: 56,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.circular(12),
+              color: ColorValue.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: profileImageUrl.isEmpty
-                ? const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 28,
-                  )
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      profileImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 12),
-          // User Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  user.namaLengkap ?? 'Unknown User',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: ColorValue.textPrimary,
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  child: profileImageUrl.isEmpty
+                      ? const Icon(
+                          Icons.person,
+                          color: Colors.blue,
+                          size: 28,
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.network(
+                            profileImageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              color: Colors.blue,
+                              size: 28,
+                            ),
+                          ),
+                        ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  user.institusi ?? 'Tidak ada institusi',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: ColorValue.textSecondary,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.namaLengkap ?? 'Unknown User',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: ColorValue.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user.institusi ?? 'Tidak ada institusi',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: ColorValue.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if ((user.bio ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          user.bio!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: ColorValue.textSecondary.withOpacity(0.85),
+                            height: 1.4,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                if (user.bio != null && user.bio!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    user.bio ?? '',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: ColorValue.textSecondary.withOpacity(0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          // Action Button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2F80ED),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              'Lihat',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

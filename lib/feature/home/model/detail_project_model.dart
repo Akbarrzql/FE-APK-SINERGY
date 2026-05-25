@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'category_parser.dart';
+
 DetailProjectModel detailProjectModelFromJson(String str) => DetailProjectModel.fromJson(json.decode(str));
 
 String detailProjectModelToJson(DetailProjectModel data) => json.encode(data.toJson());
@@ -142,7 +144,7 @@ class Project {
   int projectId;
   String title;
   String description;
-  String category;
+  List<String> category;
   String status;
   String repositoryLink;
   String projectPicture;
@@ -161,7 +163,7 @@ class Project {
     projectId: json["projectId"] is int ? json["projectId"] : int.tryParse(json["projectId"]?.toString() ?? '0') ?? 0,
     title: json["title"]?.toString() ?? '',
     description: json["description"]?.toString() ?? '',
-    category: json["category"]?.toString() ?? '',
+    category: parseCategoryList(json["category"]),
     status: json["status"]?.toString() ?? '',
     repositoryLink: json["repositoryLink"]?.toString() ?? '',
     projectPicture: json["projectPicture"]?.toString() ?? '',

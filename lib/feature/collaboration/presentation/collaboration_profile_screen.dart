@@ -243,6 +243,16 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
         : List<String>.from(project["category"] is List ? project["category"] : []);
     final String statusLabel = (project is OwnedProject) ? (project.status ?? "") : (project["status"] ?? "");
     final int id = (project is OwnedProject) ? (project.id ?? 0) : (project["id"] ?? 0);
+    final DateTime? deadlineDate = (project is OwnedProject)
+        ? project.deadline
+        : (project is Map && project["deadline"] != null
+            ? DateTime.tryParse(project["deadline"].toString())
+            : null);
+
+    final String deadlineStr = deadlineDate != null
+        ? '${deadlineDate.day}/${deadlineDate.month}/${deadlineDate.year}'
+        : "";
+
 
     final String displayStatus = _mapStatus(statusLabel);
     final Color statusColor = _statusColor(displayStatus);
@@ -362,33 +372,20 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: ColorValue.textPrimary),
             ),
             const SizedBox(height: 4),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ...((category.isNotEmpty) ? category : const ['General'])
-                    .map((item) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: ColorValue.primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            item,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: ColorValue.primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )),
-                Text(
-                  '12 Maret 2023',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            if (deadlineStr.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month_outlined, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      deadlineStr,
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
             const SizedBox(height: 12),
             Text(
               description,

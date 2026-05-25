@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
-import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
-import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:gabungyuk/feature/home/model/detail_project_model.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
@@ -355,15 +352,16 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             context,
                             MaterialPageRoute(
                               builder: (_) => EditCollaborationPage(
-                                initialData: CollaborationData(
-                                  id: widget.project.id.toString(),
-                                  title: project?.title ?? widget.project.title,
-                                  description: project?.description ?? widget.project.description,
-                                  category: List<String>.from(project?.category ?? widget.project.category),
-                                  status: _projectStatus,
-                                  repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
-                                  imageUrl: project?.projectPicture ?? widget.project.projectPicture,
-                                ),
+                                 initialData: CollaborationData(
+                                   id: widget.project.id.toString(),
+                                   title: project?.title ?? widget.project.title,
+                                   description: project?.description ?? widget.project.description,
+                                   category: List<String>.from(project?.category ?? widget.project.category),
+                                   status: _projectStatus,
+                                   repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
+                                   imageUrl: project?.projectPicture ?? widget.project.projectPicture,
+                                   deadline: project?.deadline ?? widget.project.deadline,
+                                 ),
                               ),
                             ),
                           ).then((value) {
@@ -415,24 +413,57 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 8),
 
-                    // Type & Date
+                    const SizedBox(height: 16),
+
                     Row(
                       children: [
-                        Text(
-                          ((project?.category ?? const []).isNotEmpty)
-                              ? (project?.category ?? const []).join(' • ')
-                              : (widget.project.category.isNotEmpty
-                                  ? widget.project.category.join(' • ')
-                                  : 'General'),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: ColorValue.primaryColor,
-                            fontWeight: FontWeight.w500,
+                        GestureDetector(
+                          onTap: (widget.owner?.idPengguna == widget.project.owner.id)
+                              ? () => _showStatusPicker(context)
+                              : null,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _statusColor(_projectStatus).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(50),
+                              border: Border.all(
+                                color: _statusColor(_projectStatus).withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _statusColor(_projectStatus),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _projectStatus,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: _statusColor(_projectStatus),
+                                  ),
+                                ),
+                                if (widget.owner?.idPengguna == widget.project.owner.id) ...[
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    size: 16,
+                                    color: _statusColor(_projectStatus),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Container(
                           width: 4,
                           height: 4,
@@ -441,63 +472,15 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          '12 Maret 2023',
-                          style: TextStyle(
+                        const SizedBox(width: 6),
+                        Text(
+                          '${project!.deadline!.day}/${project.deadline!.month}/${project.deadline!.year}',
+                          style: const TextStyle(
                             fontSize: 13,
                             color: ColorValue.textSecondary,
                           ),
                         ),
                       ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    GestureDetector(
-                      onTap: (widget.owner?.idPengguna == widget.project.owner.id)
-                          ? () => _showStatusPicker(context)
-                          : null,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _statusColor(_projectStatus).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(50),
-                          border: Border.all(
-                            color: _statusColor(_projectStatus).withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _statusColor(_projectStatus),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _projectStatus,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: _statusColor(_projectStatus),
-                              ),
-                            ),
-                            if (widget.owner?.idPengguna == widget.project.owner.id) ...[
-                              const SizedBox(width: 6),
-                              Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 16,
-                                color: _statusColor(_projectStatus),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
                     ),
 
                     const SizedBox(height: 14),

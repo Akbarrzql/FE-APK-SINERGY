@@ -40,6 +40,7 @@ class Datum {
   String? status;
   String? repositoryLink;
   String? projectPicture;
+  DateTime? deadline;
   Owner owner;
   List<CollaboratorShort>? collaborators;
 
@@ -51,6 +52,7 @@ class Datum {
     this.status,
     this.repositoryLink,
     this.projectPicture,
+    this.deadline,
     required this.owner,
     this.collaborators,
   });
@@ -64,6 +66,7 @@ class Datum {
       status: json["status"]?.toString(),
       repositoryLink: json["repositoryLink"]?.toString(),
       projectPicture: json["projectPicture"]?.toString(),
+      deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"].toString()) : null,
       owner: json["owner"] != null && json["owner"] is Map<String, dynamic>
           ? Owner.fromJson(json["owner"])
           : Owner(id: 0, fullName: 'Unknown', email: '', profilePicture: null),
@@ -81,6 +84,7 @@ class Datum {
     "status": status,
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
+    "deadline": deadline?.toIso8601String(),
     "owner": owner.toJson(),
     "collaborators": collaborators == null ? [] : List<dynamic>.from(collaborators!.map((x) => x.toJson())),
   };

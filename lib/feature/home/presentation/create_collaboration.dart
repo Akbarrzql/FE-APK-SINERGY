@@ -24,6 +24,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
 
   String _selectedStatus = 'Belum Dimulai';
   String? _imagePath; // ganti dengan File jika pakai image_picker
+  DateTime? _selectedDeadline;
 
   final List<String> _statusOptions = [
     'Belum Dimulai',
@@ -46,6 +47,18 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) setState(() => _imagePath = picked.path);
+  }
+
+  Future<void> _pickDeadline() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDeadline ?? DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDeadline = picked);
+    }
   }
 
   Future<void> _submit() async {
@@ -83,6 +96,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
         status: backendStatus,
         repositoryLink: _repoController.text.trim(),
         imagePath: _imagePath,
+        deadline: _selectedDeadline,
       );
 
       if (!mounted) return;
@@ -215,11 +229,33 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       const SizedBox(height: 16),
 
                       // Kategori
+                       // Repository Link
+                       _buildLabel('Repository Link'),
+                       const SizedBox(height: 6),
+                       _buildTextField(
+                         controller: _repoController,
+                         hint: 'https://github.com/...',
+                         keyboardType: TextInputType.url,
+                         prefixIcon: Icons.code_rounded,
+                         validator: (v) =>
+                         (v == null || v.isEmpty) ? 'Link repository wajib diisi' : null,
+                       ),
+
+                       const SizedBox(height: 16),
+
+                       // Kategori
                       _buildLabel('Kategori'),
                       const SizedBox(height: 6),
                       _buildCategoryInput(),
 
                       const SizedBox(height: 16),
+
+                       // Deadline
+                       _buildLabel('Deadline (Opsional)'),
+                       const SizedBox(height: 6),
+                       _buildDeadlineField(),
+
+                       const SizedBox(height: 16),
 
                       // Status
                       _buildLabel('Status'),
@@ -228,17 +264,6 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
 
                       const SizedBox(height: 16),
 
-                      // Repository Link
-                      _buildLabel('Repository Link'),
-                      const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _repoController,
-                        hint: 'https://github.com/...',
-                        keyboardType: TextInputType.url,
-                        prefixIcon: Icons.code_rounded,
-                        validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Link repository wajib diisi' : null,
-                      ),
 
                       const SizedBox(height: 32),
 
@@ -510,6 +535,45 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
           onChanged: (v) {
             if (v != null) setState(() => _selectedStatus = v);
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeadlineField() {
+    return GestureDetector(
+      onTap: _pickDeadline,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                color: ColorValue.primaryColor, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedDeadline != null
+                    ? 'Deadline: ${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}'
+                    : 'Pilih tanggal deadline',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _selectedDeadline != null
+                      ? ColorValue.textPrimary
+                      : Colors.grey[500],
+                ),
+              ),
+            ),
+            if (_selectedDeadline != null)
+              GestureDetector(
+                onTap: () => setState(() => _selectedDeadline = null),
+                child: Icon(Icons.close_rounded, color: Colors.grey[500]),
+              ),
+          ],
         ),
       ),
     );

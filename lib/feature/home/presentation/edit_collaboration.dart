@@ -15,6 +15,7 @@ class CollaborationData {
   final String status;
   final String repositoryLink;
   final String? imageUrl;
+  final DateTime? deadline;
 
   const CollaborationData({
     this.id,
@@ -24,6 +25,7 @@ class CollaborationData {
     required this.status,
     required this.repositoryLink,
     this.imageUrl,
+    this.deadline,
   });
 }
 
@@ -47,6 +49,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   late String _selectedStatus;
   String? _newImagePath; // path lokal jika user ganti gambar
   late String? _existingImageUrl;
+  DateTime? _selectedDeadline;
 
   final List<String> _statusOptions = [
     'Belum Dimulai',
@@ -78,6 +81,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     _repoController = TextEditingController(text: data.repositoryLink);
     _selectedStatus = _mapBackendStatus(data.status);
     _existingImageUrl = data.imageUrl;
+      _selectedDeadline = data.deadline;
   }
 
   String _mapBackendStatus(String? status) {
@@ -110,6 +114,18 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked != null) setState(() => _newImagePath = picked.path);
+  }
+
+  Future<void> _pickDeadline() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDeadline ?? DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDeadline = picked);
+    }
   }
 
   Future<void> _submit() async {
@@ -150,6 +166,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         status: _mapToBackendStatus(_selectedStatus),
         repositoryLink: _repoController.text.trim(),
         imagePath: _newImagePath,
+        deadline: _selectedDeadline,
       );
 
       if (!mounted) return;
@@ -278,7 +295,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
+                                  color: Colors.black.withValues(alpha: 0.55),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: const Row(
@@ -345,32 +362,43 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
 
                       const SizedBox(height: 16),
 
-                      // Kategori
-                      _buildLabel('Kategori'),
-                      const SizedBox(height: 6),
-                      _buildCategoryInput(),
+                       // Repository Link
+                       _buildLabel('Repository Link'),
+                       const SizedBox(height: 6),
+                       _buildTextField(
+                         controller: _repoController,
+                         hint: 'https://github.com/...',
+                         keyboardType: TextInputType.url,
+                         prefixIcon: Icons.code_rounded,
+                         validator: (v) => (v == null || v.isEmpty)
+                             ? 'Link repository wajib diisi'
+                             : null,
+                       ),
 
                       const SizedBox(height: 16),
 
-                      // Status
-                      _buildLabel('Status'),
+                       // Kategori
+                       _buildLabel('Kategori'),
                       const SizedBox(height: 6),
-                      _buildStatusDropdown(),
+                       _buildCategoryInput(),
 
-                      const SizedBox(height: 16),
+                       const SizedBox(height: 16),
 
-                      // Repository Link
-                      _buildLabel('Repository Link'),
-                      const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _repoController,
-                        hint: 'https://github.com/...',
-                        keyboardType: TextInputType.url,
-                        prefixIcon: Icons.code_rounded,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Link repository wajib diisi'
-                            : null,
-                      ),
+                       // Deadline
+                       _buildLabel('Deadline (Opsional)'),
+                       const SizedBox(height: 6),
+                       _buildDeadlineField(),
+
+                       const SizedBox(height: 16),
+
+                       // Status
+                       _buildLabel('Status'),
+                       const SizedBox(height: 6),
+                       _buildStatusDropdown(),
+
+                       const SizedBox(height: 16),
+
+                       // Repository Link (moved)
 
                       const SizedBox(height: 32),
 
@@ -753,6 +781,45 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeadlineField() {
+    return GestureDetector(
+      onTap: _pickDeadline,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                color: ColorValue.primaryColor, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedDeadline != null
+                    ? 'Deadline: ${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}'
+                    : 'Pilih tanggal deadline',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _selectedDeadline != null
+                      ? ColorValue.textPrimary
+                      : Colors.grey[500],
+                ),
+              ),
+            ),
+            if (_selectedDeadline != null)
+              GestureDetector(
+                onTap: () => setState(() => _selectedDeadline = null),
+                child: Icon(Icons.close_rounded, color: Colors.grey[500]),
+              ),
           ],
         ),
       ),

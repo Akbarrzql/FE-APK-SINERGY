@@ -106,6 +106,7 @@ class Project {
   String? repositoryLink;
   String? status;
   String? title;
+  DateTime? deadline;
 
   Project({
     this.category = const [],
@@ -115,6 +116,7 @@ class Project {
     this.repositoryLink,
     this.status,
     this.title,
+    this.deadline,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
@@ -125,6 +127,7 @@ class Project {
     repositoryLink: json["repositoryLink"]?.toString(),
     status: json["status"]?.toString(),
     title: json["title"]?.toString(),
+    deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"].toString()) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -135,5 +138,6 @@ class Project {
     "repositoryLink": repositoryLink,
     "status": status,
     "title": title,
+    "deadline": deadline?.toIso8601String(),
   };
 }

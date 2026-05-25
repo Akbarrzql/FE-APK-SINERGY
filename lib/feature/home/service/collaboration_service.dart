@@ -29,7 +29,7 @@ class CollaborationService {
   Future<void> createProject({
     required String title,
     required String description,
-    required String category,
+    required List<String> category,
     required String status,
     required String repositoryLink,
     String? imagePath,
@@ -77,7 +77,7 @@ class CollaborationService {
     required String id,
     required String title,
     required String description,
-    required String category,
+    required List<String> category,
     required String status,
     required String repositoryLink,
     String? imagePath,

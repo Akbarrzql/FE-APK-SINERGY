@@ -359,7 +359,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                                   id: widget.project.id.toString(),
                                   title: project?.title ?? widget.project.title,
                                   description: project?.description ?? widget.project.description,
-                                  category: project?.category ?? widget.project.category ?? '',
+                                  category: List<String>.from(project?.category ?? widget.project.category),
                                   status: _projectStatus,
                                   repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
                                   imageUrl: project?.projectPicture ?? widget.project.projectPicture,
@@ -421,7 +421,11 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     Row(
                       children: [
                         Text(
-                          project?.category ?? widget.project.category ?? 'General',
+                          ((project?.category ?? const []).isNotEmpty)
+                              ? (project?.category ?? const []).join(' • ')
+                              : (widget.project.category.isNotEmpty
+                                  ? widget.project.category.join(' • ')
+                                  : 'General'),
                           style: const TextStyle(
                             fontSize: 13,
                             color: ColorValue.primaryColor,
@@ -536,7 +540,10 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        SkillTag(label: project?.category ?? widget.project.category ?? 'General'),
+                        ...(((project?.category ?? const []).isNotEmpty)
+                            ? (project?.category ?? const [])
+                            : widget.project.category)
+                            .map((cat) => SkillTag(label: cat)),
                       ],
                     ),
                   ],
@@ -787,7 +794,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     id: widget.project.id.toString(),
                     title: project?.title ?? widget.project.title,
                     description: project?.description ?? widget.project.description,
-                    category: project?.category ?? widget.project.category ?? '',
+                      category: List<String>.from(project?.category ?? widget.project.category),
                     status: _mapToBackendStatus(s),
                     repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
                   );

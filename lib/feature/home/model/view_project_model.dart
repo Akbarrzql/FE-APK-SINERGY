@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'category_parser.dart';
+
 ViewProjectModel viewProjectModelFromJson(String str) => ViewProjectModel.fromJson(json.decode(str));
 
 String viewProjectModelToJson(ViewProjectModel data) => json.encode(data.toJson());
@@ -34,7 +36,7 @@ class Datum {
   int id;
   String title;
   String description;
-  String? category;
+  List<String> category;
   String? status;
   String? repositoryLink;
   String? projectPicture;
@@ -45,7 +47,7 @@ class Datum {
     required this.id,
     required this.title,
     required this.description,
-    this.category,
+    this.category = const [],
     this.status,
     this.repositoryLink,
     this.projectPicture,
@@ -58,7 +60,7 @@ class Datum {
       id: json["id"] is int ? json["id"] : int.tryParse(json["id"]?.toString() ?? '0') ?? 0,
       title: json["title"]?.toString() ?? '',
       description: json["description"]?.toString() ?? '',
-      category: json["category"]?.toString(),
+      category: parseCategoryList(json["category"]),
       status: json["status"]?.toString(),
       repositoryLink: json["repositoryLink"]?.toString(),
       projectPicture: json["projectPicture"]?.toString(),

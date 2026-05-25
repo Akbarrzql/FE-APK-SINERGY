@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 
+import '../../home/model/category_parser.dart';
 import '../../home/model/view_project_model.dart';
 
 CollaborationProfileModel collaborationProfileModelFromJson(String str) => CollaborationProfileModel.fromJson(json.decode(str));
@@ -58,7 +59,7 @@ class OwnedProject {
   int? id;
   String? title;
   String? description;
-  String? category;
+  List<String> category;
   String? status;
   String? repositoryLink;
   String? projectPicture;
@@ -68,7 +69,7 @@ class OwnedProject {
     this.id,
     this.title,
     this.description,
-    this.category,
+    this.category = const [],
     this.status,
     this.repositoryLink,
     this.projectPicture,
@@ -79,7 +80,7 @@ class OwnedProject {
     id: json["id"],
     title: json["title"],
     description: json["description"],
-    category: json["category"],
+    category: parseCategoryList(json["category"]),
     status: json["status"],
     repositoryLink: json["repositoryLink"],
     projectPicture: json["projectPicture"],

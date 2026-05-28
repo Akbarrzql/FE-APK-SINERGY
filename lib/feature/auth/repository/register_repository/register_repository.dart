@@ -1,202 +1,198 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
-import 'package:gabungyuk/core/common/api_config.dart';
-import 'package:gabungyuk/core/common/api_exception.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
-import 'package:gabungyuk/core/common/shared_code.dart';
-import 'package:gabungyuk/feature/auth/model/register_model/register_model.dart';
-import 'package:http/http.dart' as http;
+import 'package:gabungyuk/feature/auth/service/firebase_auth_token_service.dart';
+
+/// 📝 Register Model - Simple Firebase-based
+class FirebaseRegisterResult {
+  final User user;
+  final String idToken;
+
+  FirebaseRegisterResult({required this.user, required this.idToken});
+}
 
 abstract class RegisterRepository {
-  Future<RegisterModel> registerUser({
+  Future<FirebaseRegisterResult> registerUser({
     required String name,
     required String email,
     required String password,
   });
 
-  Future<RegisterModel> registerGoogle({required String idToken});
+  Future<FirebaseRegisterResult> registerGoogle({
+    required UserCredential credential,
+  });
 }
 
 class RegisterRepositoryImpl implements RegisterRepository {
-  final SharedCode _sharedCode = SharedCode();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
-  Future<RegisterModel> registerUser({
+  Future<FirebaseRegisterResult> registerUser({
     required String name,
     required String email,
     required String password,
   }) async {
-    final response = await _postRegister(
-      url: Uri.parse('${ApiConfig.baseUrl}/api/v1/users/register'),
-      body: {'namaLengkap': name, 'email': email, 'password': password},
-      logLabel: 'Register',
-    );
+    try {
+      if (kDebugMode) {
+        debugPrint('REGISTER: Attempting Firebase user creation for $email');
+      }
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final registerModel = registerModelFromJson(response.body);
-
-      // =======================================================================
-      // PERBAIKAN NULL-SAFETY & TIPE DATA: Mengganti '' menjadi 0 agar pas dengan int
-      // =======================================================================
-      await _sharedCode.saveAuthSession(
-        token: registerModel.data?.token ?? '',
-        expiredAt:
-            registerModel.data?.expiredAt ?? 0, // ← SEKARANG MENJADI ANGKA 0
-      );
-
-      await _syncUserToFirestore(
-        name: name,
+      // ✅ Create user di Firebase Auth
+      final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
+        password: password,
+      );
+
+      final user = userCredential.user;
+      if (user == null) {
+        throw Exception('Firebase user tidak ditemukan setelah register');
+      }
+
+      // ✅ Update display name
+      await user.updateDisplayName(name);
+      await user.reload();
+
+      // ✅ Get fresh Firebase ID Token
+      final idToken = await FirebaseAuthTokenService.instance
+          .getIdTokenWithRefresh();
+      if (idToken == null) {
+        throw Exception('Gagal mendapatkan ID Token');
+      }
+
+      // ✅ Save user profile ke Firestore
+      await _syncUserToFirestore(
+        uid: user.uid,
+        email: email,
+        namaLengkap: name,
         provider: 'email_password',
-        password: password, // ← NEW: Save plaintext password
+        idToken: idToken,
       );
 
-      return registerModel;
-    } else {
-      String message = 'Terjadi kesalahan. Silakan coba lagi.';
-      try {
-        final Map<String, dynamic> json = jsonDecode(response.body);
-        if (json.containsKey('message')) {
-          message = AuthUiHelper.toIndonesianMessage(
-            json['message'].toString(),
-          );
-        } else if (json.containsKey('msg')) {
-          message = AuthUiHelper.toIndonesianMessage(json['msg'].toString());
-        } else if (json.containsKey('details')) {
-          message = AuthUiHelper.toIndonesianMessage(
-            json['details'].toString(),
-          );
-        }
-      } catch (_) {
-        // ignore json parse errors
+      if (kDebugMode) {
+        debugPrint('REGISTER: Firebase user creation success for $email');
       }
 
-      if (response.statusCode == 400) {
-        message = message.isNotEmpty
-            ? message
-            : 'Permintaan tidak valid. Periksa kembali input.';
-      } else if (response.statusCode == 401) {
-        message = 'Sesi Anda telah berakhir. Silakan masuk kembali.';
-      } else if (response.statusCode >= 500) {
-        message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
+      return FirebaseRegisterResult(user: user, idToken: idToken);
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('REGISTER: Firebase auth exception: ${e.code} - $e');
       }
 
-      throw ApiException(
-        AuthUiHelper.toIndonesianMessage(message),
-        response.statusCode,
-      );
+      throw Exception(_getReadableAuthError(e.code));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('REGISTER: Unexpected error: $e');
+      }
+      throw Exception('Gagal mendaftar. Silakan coba lagi.');
     }
   }
 
   @override
-  Future<RegisterModel> registerGoogle({required String idToken}) async {
-    final response = await _postRegister(
-      url: Uri.parse('${ApiConfig.baseUrl}/api/v1/users/register/google'),
-      body: {'idToken': idToken},
-      logLabel: 'Register Google',
-    );
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final registerModel = registerModelFromJson(response.body);
-
-      // =======================================================================
-      // PERBAIKAN NULL-SAFETY & TIPE DATA: Mengganti '' menjadi 0 agar pas dengan int
-      // =======================================================================
-      await _sharedCode.saveAuthSession(
-        token: registerModel.data?.token ?? '',
-        expiredAt:
-            registerModel.data?.expiredAt ?? 0, // ← SEKARANG MENJADI ANGKA 0
-      );
-
-      return registerModel;
-    }
-
-    String message = 'Terjadi kesalahan. Silakan coba lagi.';
-    try {
-      final Map<String, dynamic> json = jsonDecode(response.body);
-      if (json.containsKey('message')) {
-        message = AuthUiHelper.toIndonesianMessage(json['message'].toString());
-      } else if (json.containsKey('msg')) {
-        message = AuthUiHelper.toIndonesianMessage(json['msg'].toString());
-      } else if (json.containsKey('error')) {
-        message = AuthUiHelper.toIndonesianMessage(json['error'].toString());
-      }
-    } catch (_) {
-      // ignore json parse errors
-    }
-
-    if (response.statusCode == 400) {
-      message = message.isNotEmpty
-          ? message
-          : 'Permintaan tidak valid. Periksa kembali input.';
-    } else if (response.statusCode == 401) {
-      message = 'Sesi Anda telah berakhir. Silakan masuk kembali.';
-    } else if (response.statusCode >= 500) {
-      message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
-    }
-
-    throw ApiException(
-      AuthUiHelper.toIndonesianMessage(message),
-      response.statusCode,
-    );
-  }
-
-  Future<http.Response> _postRegister({
-    required Uri url,
-    required Map<String, dynamic> body,
-    required String logLabel,
-  }) {
-    return http
-        .post(
-          url,
-          headers: {HttpHeaders.contentTypeHeader: 'application/json'},
-          body: jsonEncode(body),
-        )
-        .then((response) {
-          if (kDebugMode) {
-            print('$logLabel response status: ${response.statusCode}');
-            print('$logLabel response body: ${response.body}');
-          }
-          return response;
-        });
-  }
-
-  Future<void> _syncUserToFirestore({
-    required String name,
-    required String email,
-    required String provider,
-    String? password,
+  Future<FirebaseRegisterResult> registerGoogle({
+    required UserCredential credential,
   }) async {
     try {
-      final existing = await FirebaseUserSyncHelper.instance.findUserByEmail(
-        email,
-      );
-      final uid = existing == null
-          ? email
-          : (existing['uid']?.toString().isNotEmpty == true
-                ? existing['uid'].toString()
-                : email);
+      if (kDebugMode) {
+        debugPrint('REGISTER GOOGLE: Processing Google sign-up');
+      }
 
-      final hashedPassword = password != null
-          ? FirebaseUserSyncHelper.instance.hashPassword(password)
-          : null;
+      final user = credential.user;
+      if (user == null) {
+        throw Exception('Google user tidak ditemukan');
+      }
 
-      await FirebaseUserSyncHelper.instance.upsertUserDoc(
-        uid: uid,
-        email: email,
-        fullName: name,
-        provider: provider,
-        hasLocalPassword: true,
-        localPassword: hashedPassword,
-        plainPassword: password, // ← NEW: Save plaintext password
+      // ✅ Get fresh Firebase ID Token
+      final idToken = await FirebaseAuthTokenService.instance
+          .getTokenFromGoogleSignIn();
+      if (idToken == null) {
+        throw Exception('Gagal mendapatkan ID Token dari Google');
+      }
+
+      // ✅ Save user profile ke Firestore
+      await _syncUserToFirestore(
+        uid: user.uid,
+        email: user.email ?? '',
+        namaLengkap: user.displayName ?? 'Google User',
+        provider: 'google',
+        photoUrl: user.photoURL,
+        idToken: idToken,
       );
+
+      if (kDebugMode) {
+        debugPrint('REGISTER GOOGLE: Google sign-up success');
+      }
+
+      return FirebaseRegisterResult(user: user, idToken: idToken);
     } catch (e) {
       if (kDebugMode) {
-        print('Firestore sync failed for $email: $e');
+        debugPrint('REGISTER GOOGLE: Error: $e');
       }
+      throw Exception('Gagal mendaftar dengan Google. Silakan coba lagi.');
     }
+  }
+
+  /// ✅ Simpan user profile ke Firestore
+  Future<void> _syncUserToFirestore({
+    required String uid,
+    required String email,
+    required String namaLengkap,
+    required String provider,
+    required String idToken,
+    String? photoUrl,
+  }) async {
+    try {
+      // 1. Sync ke dokumen berdasarkan UID (Primary)
+      final userRef = _firestore.collection('users').doc(uid);
+
+      await userRef.set({
+        'uid': uid,
+        'email': email,
+        'nama_lengkap': namaLengkap,
+        'provider': provider,
+        'photo_url': photoUrl,
+        'firebase_id_token': idToken,
+        'created_at': FieldValue.serverTimestamp(),
+        'last_login': FieldValue.serverTimestamp(),
+        'bio': '',
+        'keahlian': '',
+        'lokasi': '',
+        'institusi': '',
+        'whatsapp': '',
+      });
+
+      // 2. Sync ke dokumen berdasarkan Email (Secondary, untuk Account Linking)
+      await FirebaseUserSyncHelper.instance.updateUserFirebaseToken(
+        uid: uid,
+        email: email,
+        firebaseIdToken: idToken,
+      );
+
+      if (kDebugMode) {
+        debugPrint(
+          'REGISTER: User profile synced to Firestore (UID & Email docs)',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('REGISTER: Error syncing to Firestore: $e');
+      }
+      // Don't throw - auth sudah berhasil, Firestore sync optional
+    }
+  }
+
+  /// ✅ Convert Firebase Auth error ke pesan user-friendly
+  String _getReadableAuthError(String errorCode) {
+    return AuthUiHelper.toIndonesianMessage(switch (errorCode) {
+      'weak-password' => 'Password terlalu lemah. Gunakan minimal 6 karakter.',
+      'email-already-in-use' =>
+        'Email sudah terdaftar. Silakan login atau gunakan email lain.',
+      'invalid-email' => 'Format email tidak valid.',
+      'operation-not-allowed' => 'Operasi tidak diizinkan. Hubungi admin.',
+      'too-many-requests' => 'Terlalu banyak percobaan. Coba lagi nanti.',
+      _ => 'Gagal mendaftar. Silakan coba lagi.',
+    });
   }
 }

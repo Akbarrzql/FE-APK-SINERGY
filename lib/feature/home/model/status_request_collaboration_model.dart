@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'category_parser.dart';
+
 StatusRequestCollaborationModel statusRequestCollaborationModelFromJson(String str) => StatusRequestCollaborationModel.fromJson(json.decode(str));
 
 String statusRequestCollaborationModelToJson(StatusRequestCollaborationModel data) => json.encode(data.toJson());
@@ -140,7 +142,7 @@ class Project {
   int? projectId;
   String? title;
   String? description;
-  String? category;
+  List<String> category;
   String? status;
   String? repositoryLink;
   String? projectPicture;
@@ -149,7 +151,7 @@ class Project {
     this.projectId,
     this.title,
     this.description,
-    this.category,
+    this.category = const [],
     this.status,
     this.repositoryLink,
     this.projectPicture,
@@ -159,7 +161,7 @@ class Project {
     projectId: json["projectId"],
     title: json["title"],
     description: json["description"],
-    category: json["category"],
+    category: parseCategoryList(json["category"]),
     status: json["status"],
     repositoryLink: json["repositoryLink"],
     projectPicture: json["projectPicture"],

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
-import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
-import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:gabungyuk/feature/home/model/detail_project_model.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
@@ -13,6 +11,10 @@ import 'package:gabungyuk/feature/home/model/view_collaboration_model.dart' as c
 import 'package:gabungyuk/feature/home/model/pending_collaboration_model.dart' as pending_model;
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
+import 'package:gabungyuk/feature/rating/bloc/rating_bloc.dart';
+import 'package:gabungyuk/feature/rating/presentation/rating_collaborators_dialog.dart';
+import 'package:gabungyuk/feature/rating/repository/rating_repository.dart';
+import 'package:gabungyuk/feature/rating/user_rating_in_project.dart' as project_rating;
 import 'edit_collaboration.dart';
 
 // ─── Member Tile Widget ───────────────────────────────────────────────────────
@@ -20,7 +22,7 @@ class MemberTile extends StatelessWidget {
   final String name;
   final String role;
   final String imageUrl;
-  final int rating;
+  final double? rating;
   final String? status;
   final bool isOwner;
   final VoidCallback? onAccept;
@@ -31,7 +33,7 @@ class MemberTile extends StatelessWidget {
     required this.name,
     required this.role,
     required this.imageUrl,
-    required this.rating,
+    this.rating,
     this.status,
     this.isOwner = false,
     this.onAccept,
@@ -41,12 +43,12 @@ class MemberTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isPending = status?.toUpperCase() == 'PENDING';
+    final hasRating = (rating ?? 0) > 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          // Avatar
           CircleAvatar(
             radius: 28,
             backgroundColor: Colors.grey[200],
@@ -58,8 +60,6 @@ class MemberTile extends StatelessWidget {
                 : null,
           ),
           const SizedBox(width: 14),
-
-          // Name & Role
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,36 +78,44 @@ class MemberTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(
+                    Icon(
                       Icons.star_rounded,
-                      color: ColorValue.starColor,
+                      color: hasRating ? ColorValue.starColor : Colors.grey.shade400,
                       size: 18,
                     ),
-                    const SizedBox(width: 2),
+                    const SizedBox(width: 4),
                     Text(
-                      '$rating',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      hasRating ? rating!.toStringAsFixed(1) : 'Belum ada rating',
+                      style: TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: ColorValue.textPrimary,
+                        color: hasRating ? ColorValue.textPrimary : Colors.grey.shade500,
                       ),
                     ),
+                    if (hasRating) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        '/5',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 3),
                 Text(
                   role,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: ColorValue.textSecondary,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-
           if (isOwner && isPending) ...[
             const SizedBox(width: 8),
             _ActionButton(
@@ -192,12 +200,14 @@ class DetailCollaboration extends StatefulWidget {
 
 class _DetailCollaborationState extends State<DetailCollaboration> {
   final CollaborationService _collaborationService = CollaborationService();
+  final RatingRepository _ratingRepository = RatingRepositoryImpl();
   bool _isLoading = true;
   DetailProjectModel? _detailModel;
   collab_model.ViewCollaborationModel? _collaborationModel;
   pending_model.PendingCollaborationModel? _pendingModel;
   bool _isExpanded = false;
   late String _projectStatus;
+  List<project_rating.Datum> _projectRatings = [];
 
   @override
   void initState() {
@@ -232,11 +242,26 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
           }
         });
       }
+
+      await _fetchProjectRatings();
+
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
       }
       debugPrint('Error fetching project detail: $e');
+    }
+  }
+
+  Future<void> _fetchProjectRatings() async {
+    try {
+      final ratings = await _ratingRepository.getRatingsByProject(widget.project.id);
+      if (!mounted) return;
+      setState(() {
+        _projectRatings = ratings.data ?? [];
+      });
+    } catch (e) {
+      debugPrint('Error fetching project ratings: $e');
     }
   }
 
@@ -249,6 +274,8 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     switch (status.toUpperCase()) {
       case 'OPEN':
         return 'Sedang Berjalan';
+      case 'COMPLETED':
+        return 'Project Berakhir';
       case 'DONE':
         return 'Selesai';
       case 'HOLD':
@@ -268,6 +295,8 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
         return 'DONE';
       case 'Ditunda':
         return 'HOLD';
+      case 'Project Berakhir':
+        return 'COMPLETED';
       case 'Belum Dimulai':
         return 'NOT OPEN';
       default:
@@ -279,6 +308,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     'Belum Dimulai',
     'Sedang Berjalan',
     'Selesai',
+    'Project Berakhir',
     'Ditunda',
   ];
 
@@ -291,6 +321,14 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     final project = _detailModel?.data.project;
     final allCollaborators = _detailModel?.data.collaborators ?? [];
     final isProjectOwner = widget.owner?.idPengguna == widget.project.owner.id;
+    final ratingByUserId = <int, double>{};
+
+    for (final userId in _projectRatings.map((e) => e.ratedUserId).whereType<int>().toSet()) {
+      final userRatings = _projectRatings.where((r) => r.ratedUserId == userId).toList();
+      if (userRatings.isEmpty) continue;
+      final average = userRatings.fold<double>(0, (sum, item) => sum + (item.ratingValue ?? 0)) / userRatings.length;
+      ratingByUserId[userId] = average;
+    }
 
     // Filter members for clarity
     final acceptedMembers = allCollaborators.where((m) => m.requestStatus.toUpperCase() == 'ACCEPTED').toList();
@@ -355,15 +393,16 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             context,
                             MaterialPageRoute(
                               builder: (_) => EditCollaborationPage(
-                                initialData: CollaborationData(
-                                  id: widget.project.id.toString(),
-                                  title: project?.title ?? widget.project.title,
-                                  description: project?.description ?? widget.project.description,
-                                  category: project?.category ?? widget.project.category ?? '',
-                                  status: _projectStatus,
-                                  repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
-                                  imageUrl: project?.projectPicture ?? widget.project.projectPicture,
-                                ),
+                                 initialData: CollaborationData(
+                                   id: widget.project.id.toString(),
+                                   title: project?.title ?? widget.project.title,
+                                   description: project?.description ?? widget.project.description,
+                                   category: List<String>.from(project?.category ?? widget.project.category),
+                                   status: _projectStatus,
+                                   repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
+                                   imageUrl: project?.projectPicture ?? widget.project.projectPicture,
+                                   deadline: project?.deadline ?? widget.project.deadline,
+                                 ),
                               ),
                             ),
                           ).then((value) {
@@ -415,20 +454,57 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 8),
 
-                    // Type & Date
+                    const SizedBox(height: 16),
+
                     Row(
                       children: [
-                        Text(
-                          project?.category ?? widget.project.category ?? 'General',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: ColorValue.primaryColor,
-                            fontWeight: FontWeight.w500,
+                        GestureDetector(
+                          onTap: (widget.owner?.idPengguna == widget.project.owner.id)
+                              ? () => _showStatusPicker(context)
+                              : null,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _statusColor(_projectStatus).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(50),
+                              border: Border.all(
+                                color: _statusColor(_projectStatus).withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _statusColor(_projectStatus),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _projectStatus,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: _statusColor(_projectStatus),
+                                  ),
+                                ),
+                                if (widget.owner?.idPengguna == widget.project.owner.id) ...[
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    size: 16,
+                                    color: _statusColor(_projectStatus),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Container(
                           width: 4,
                           height: 4,
@@ -437,63 +513,24 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          '12 Maret 2023',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: ColorValue.textSecondary,
+                        const SizedBox(width: 6),
+                        if (project?.deadline != null)
+                          Text(
+                            '${project!.deadline!.day}/${project.deadline!.month}/${project.deadline!.year}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: ColorValue.textSecondary,
+                            ),
+                          )
+                        else
+                          const Text(
+                            'Tidak ada deadline',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: ColorValue.textSecondary,
+                            ),
                           ),
-                        ),
                       ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    GestureDetector(
-                      onTap: (widget.owner?.idPengguna == widget.project.owner.id)
-                          ? () => _showStatusPicker(context)
-                          : null,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _statusColor(_projectStatus).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(50),
-                          border: Border.all(
-                            color: _statusColor(_projectStatus).withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _statusColor(_projectStatus),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _projectStatus,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: _statusColor(_projectStatus),
-                              ),
-                            ),
-                            if (widget.owner?.idPengguna == widget.project.owner.id) ...[
-                              const SizedBox(width: 6),
-                              Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 16,
-                                color: _statusColor(_projectStatus),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
                     ),
 
                     const SizedBox(height: 14),
@@ -536,7 +573,10 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        SkillTag(label: project?.category ?? widget.project.category ?? 'General'),
+                        ...(((project?.category ?? const []).isNotEmpty)
+                            ? (project?.category ?? const [])
+                            : widget.project.category)
+                            .map((cat) => SkillTag(label: cat)),
                       ],
                     ),
                   ],
@@ -595,7 +635,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                           name: m.namaLengkap,
                           role: m.keahlian, // Tampilkan keahlian user
                           imageUrl: m.profilePicture ?? '',
-                          rating: 5,
+                          rating: ratingByUserId[m.idPengguna],
                           status: m.requestStatus,
                           isOwner: isProjectOwner,
                           onAccept: () => _handleCollaborationAction(m.idPengguna, 'ACCEPT'),
@@ -606,7 +646,8 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                               height: 1, color: Color(0xFFEEEEEE)),
                       ],
                     );
-                  },
+
+},
                   childCount: displayMembers.length,
                 ),
               ),
@@ -665,7 +706,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             name: m.namaLengkap ?? '',
                             role: m.keahlian ?? 'Anggota', // Tampilkan keahlian user
                             imageUrl: m.profilePicture ?? '',
-                            rating: 5,
+                            rating: ratingByUserId[m.idPengguna ?? -1],
                             status: 'PENDING',
                             isOwner: true,
                             onAccept: () => _handleCollaborationAction(m.idPengguna!, 'ACCEPT'),
@@ -682,11 +723,13 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
               ),
             ],
 
+
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
             // ── Join Button ────────────────────────────────────────────────
             if (widget.owner?.idPengguna != widget.project.owner.id &&
-                _collaborationModel?.data?.status?.toUpperCase() != 'ACCEPTED')
+                _collaborationModel?.data?.status?.toUpperCase() != 'ACCEPTED' &&
+                _projectStatus != 'Project Berakhir')
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -778,21 +821,28 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
 
                 // Simpan status lama untuk rollback jika gagal
                 final oldStatus = _projectStatus;
+                final oldBackendStatus = _mapToBackendStatus(oldStatus);
                 setState(() => _projectStatus = s);
                 Navigator.pop(context);
 
                 try {
                   final project = _detailModel?.data.project;
+                  final newBackendStatus = _mapToBackendStatus(s);
                   await _collaborationService.updateCollaboration(
                     id: widget.project.id.toString(),
                     title: project?.title ?? widget.project.title,
                     description: project?.description ?? widget.project.description,
-                    category: project?.category ?? widget.project.category ?? '',
-                    status: _mapToBackendStatus(s),
+                      category: List<String>.from(project?.category ?? widget.project.category),
+                    status: newBackendStatus,
                     repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
                   );
+
                   if (mounted) {
                     AuthUiHelper.showSuccess(context, 'Status diperbarui ke $s');
+                  }
+
+                  if (newBackendStatus == 'COMPLETED' && oldBackendStatus != 'COMPLETED') {
+                    await _showCompletionRatingFlow();
                   }
                 } catch (e) {
                   if (mounted) {
@@ -827,18 +877,69 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     );
   }
 
+  Future<void> _showCompletionRatingFlow() async {
+    try {
+      final detail = await _collaborationService.getProjectDetail(widget.project.id);
+      final collaborators = detail.data.collaborators
+          .where((c) => c.requestStatus.toUpperCase() == 'ACCEPTED')
+          .toList();
+
+      if (!mounted) return;
+
+      if (collaborators.isEmpty) {
+        AuthUiHelper.showSuccess(context, 'Project berhasil diselesaikan.');
+        return;
+      }
+
+      final collaboratorInfos = collaborators
+          .map((c) => CollaboratorInfo(
+                userId: c.idPengguna,
+                userName: c.namaLengkap,
+                profilePicture: c.profilePicture,
+                role: c.role,
+              ))
+          .toList();
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => BlocProvider<RatingBloc>(
+          create: (_) => RatingBloc(
+            ratingRepository: RatingRepositoryImpl(),
+          ),
+          child: RatingCollaboratorsDialog(
+            projectId: widget.project.id,
+            collaborators: collaboratorInfos,
+            onComplete: () {
+              if (mounted) {
+                AuthUiHelper.showSuccess(context, 'Semua rating berhasil disimpan.');
+              }
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Error opening completion rating dialog: $e');
+      AuthUiHelper.showSuccess(context, 'Project berhasil diselesaikan.');
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'Sedang Berjalan':
         return Colors.green;
       case 'Selesai':
         return Colors.blue;
+      case 'Project Berakhir':
+        return Colors.purple;
       case 'Ditunda':
         return Colors.orange;
       default:
         return Colors.grey;
     }
   }
+
 
   String _getJoinButtonText(String? status) {
     if (status == null) return 'Bergabung';

@@ -5,8 +5,12 @@ import 'package:gabungyuk/feature/collaboration/model/collaboration_profile_mode
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 import 'package:gabungyuk/feature/home/presentation/detail_collaboration.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
+import 'package:gabungyuk/feature/home/model/request_collaboration_model.dart' as request_model;
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
+import 'package:gabungyuk/feature/rating/model/user_rating_by_project_model.dart' as review_model;
+import 'package:gabungyuk/feature/rating/presentation/user_review_section.dart' as user_review;
+import 'package:gabungyuk/feature/rating/repository/rating_repository.dart';
 
 class CollaborationProfileScreen extends StatefulWidget {
   const CollaborationProfileScreen({super.key});
@@ -19,10 +23,16 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
   late TabController _tabController;
   final CollaborationService _collaborationService = CollaborationService();
   final ProfileRepository _profileRepository = ProfileRepositoryImpl();
+  final RatingRepository _ratingRepository = RatingRepositoryImpl();
   bool _isLoading = true;
   CollaborationProfileModel? _profileData;
   ViewProfileModel? _profile;
   String _searchQuery = "";
+  bool _isLoadingRatings = true;
+  bool _hasRatingError = false;
+  List<review_model.Datum> _userReviews = [];
+  double? _averageRating;
+  int? _totalReviews;
 
   @override
   void initState() {
@@ -44,6 +54,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
         _profile = results[1] as ViewProfileModel;
         _isLoading = false;
       });
+      _fetchUserRatings();
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -51,6 +62,30 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           SnackBar(content: Text('Gagal memuat data: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _fetchUserRatings() async {
+    setState(() {
+      _isLoadingRatings = true;
+      _hasRatingError = false;
+    });
+    try {
+      final reviews = await _ratingRepository.getRatingsByUser(_profile!.idPengguna);
+      final avg = await _ratingRepository.getAverageRating(_profile!.idPengguna);
+      setState(() {
+        _userReviews = reviews.data?.ratings ?? [];
+        _averageRating = reviews.data?.averageRating ?? avg.data?.averageRating;
+        _totalReviews = reviews.data?.totalRatings ?? avg.data?.totalReviews;
+        _isLoadingRatings = false;
+      });
+    } catch (e) {
+      setState(() {
+        _userReviews = [];
+        _isLoadingRatings = false;
+        _hasRatingError = true;
+      });
+      debugPrint('Error loading user ratings: $e');
     }
   }
 
@@ -79,6 +114,18 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
       body: Column(
         children: [
           _buildSearchField(),
+          // User rating preview for account owner
+          if (!_isLoading)
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            //   child: user_review.UserReviewSection(
+            //     reviews: _userReviews,
+            //     averageRating: _averageRating,
+            //     totalReviews: _totalReviews,
+            //     isLoading: _isLoadingRatings,
+            //     hasError: _hasRatingError,
+            //   ),
+            // ),
           _buildTabBar(),
           Expanded(
             child: _isLoading
@@ -177,7 +224,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? ColorValue.primaryColor.withOpacity(0.1) : Colors.transparent,
+              color: isSelected ? ColorValue.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -204,7 +251,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
 
     if (_searchQuery.isNotEmpty) {
       projects = projects.where((p) {
-        final title = (p is OwnedProject) ? (p.title ?? "") : (p["title"] ?? "");
+        final title = _projectTitle(p);
         return title.toLowerCase().contains(_searchQuery);
       }).toList();
     }
@@ -236,27 +283,28 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
   }
 
   Widget _buildProjectCard(dynamic project, bool isOwned) {
-    final String title = (project is OwnedProject) ? (project.title ?? "") : (project["title"] ?? "");
-    final String description = (project is OwnedProject) ? (project.description ?? "") : (project["description"] ?? "");
-    final String category = (project is OwnedProject) ? (project.category ?? "") : (project["category"] ?? "");
-    final String statusLabel = (project is OwnedProject) ? (project.status ?? "") : (project["status"] ?? "");
-    final int id = (project is OwnedProject) ? (project.id ?? 0) : (project["id"] ?? 0);
+    final String title = _projectTitle(project);
+    final String description = _projectDescription(project);
+    final List<String> category = _projectCategory(project);
+    final String statusLabel = _projectStatusLabel(project);
+    final int id = _projectId(project);
+    final DateTime? deadlineDate = _projectDeadline(project);
+
+    final String deadlineStr = deadlineDate != null
+        ? '${deadlineDate.day}/${deadlineDate.month}/${deadlineDate.year}'
+        : "";
+
 
     final String displayStatus = _mapStatus(statusLabel);
     final Color statusColor = _statusColor(displayStatus);
 
-    String ownerName = isOwned ? (_profile?.namaLengkap ?? 'Anda') : 'Pemilik Kolaborasi';
-    String? ownerImage = isOwned ? _profile?.profilePicture : null;
-
-    if (!isOwned && project is Map) {
-      ownerName = project['owner']?['fullName'] ?? 'Pemilik Kolaborasi';
-      ownerImage = project['owner']?['profilePicture'];
-    }
+    final String ownerName = isOwned ? (_profile?.namaLengkap ?? 'Anda') : _projectOwnerName(project);
+    final String? ownerImage = isOwned ? _profile?.profilePicture : _projectOwnerImage(project);
 
     return GestureDetector(
       onTap: () {
         // Pastikan kita punya data profil sebelum navigasi
-        if (_profile == null) return;
+        if (_profile == null || id == 0) return;
 
         final datum = Datum(
           id: id,
@@ -264,16 +312,12 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           description: description,
           category: category,
           status: statusLabel, // Gunakan status asli (backend)
-          repositoryLink: (project is OwnedProject)
-              ? project.repositoryLink
-              : (project is Map ? project['repositoryLink']?.toString() : null),
-          projectPicture: (project is OwnedProject)
-              ? project.projectPicture
-              : (project is Map ? project['projectPicture']?.toString() : null),
+          repositoryLink: _projectRepositoryLink(project),
+          projectPicture: _projectPicture(project),
           owner: Owner(
             id: isOwned 
                 ? _profile!.idPengguna 
-                : (project is Map && project['owner'] != null ? (project['owner']['id'] ?? 0) : 0),
+                : _projectOwnerId(project),
             fullName: isOwned ? _profile!.namaLengkap : ownerName,
             email: isOwned ? _profile!.email : '',
             profilePicture: isOwned ? _profile!.profilePicture : ownerImage,
@@ -303,7 +347,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           border: Border.all(color: Colors.grey.shade100),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -317,8 +361,8 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey[100],
-                  backgroundImage: (ownerImage != null && ownerImage!.isNotEmpty) ? NetworkImage(ownerImage!) : null,
-                  child: (ownerImage == null || ownerImage!.isEmpty) ? const Icon(Icons.person, size: 20, color: Colors.blue) : null,
+                  backgroundImage: ownerImage != null && ownerImage.isNotEmpty ? NetworkImage(ownerImage) : null,
+                  child: ownerImage == null || ownerImage.isEmpty ? const Icon(Icons.person, size: 20, color: Colors.blue) : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -340,7 +384,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -360,21 +404,20 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: ColorValue.textPrimary),
             ),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  category,
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            if (deadlineStr.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month_outlined, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      deadlineStr,
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                const Text('•', style: TextStyle(color: Colors.grey)),
-                const SizedBox(width: 8),
-                Text(
-                  '12 Maret 2023',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                ),
-              ],
-            ),
+              ),
             const SizedBox(height: 12),
             Text(
               description,
@@ -388,9 +431,11 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
               children: [
                 Row(
                   children: [
-                    _buildTag(category),
-                    const SizedBox(width: 8),
-                    _buildTag('General'),
+                    ...(category.isNotEmpty ? category : const ['General'])
+                        .map((item) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _buildTag(item),
+                            )),
                   ],
                 ),
                 MemberAvatarsWidget(projectId: id),
@@ -402,16 +447,112 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
     );
   }
 
+  int _projectId(dynamic project) {
+    if (project is OwnedProject) return project.id ?? 0;
+    if (project is request_model.Data) {
+      return project.projectId ?? project.project?.projectId ?? 0;
+    }
+    if (project is Map) {
+      final value = project['projectId'] ?? project['id'] ?? project['project']?['projectId'] ?? project['project']?['id'];
+      if (value is int) return value;
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+    return 0;
+  }
+
+  String _projectTitle(dynamic project) {
+    if (project is OwnedProject) return project.title ?? '';
+    if (project is request_model.Data) return project.project?.title ?? '';
+    if (project is Map) return project['title']?.toString() ?? project['project']?['title']?.toString() ?? '';
+    return '';
+  }
+
+  String _projectDescription(dynamic project) {
+    if (project is OwnedProject) return project.description ?? '';
+    if (project is request_model.Data) return project.project?.description ?? '';
+    if (project is Map) return project['description']?.toString() ?? project['project']?['description']?.toString() ?? '';
+    return '';
+  }
+
+  List<String> _projectCategory(dynamic project) {
+    if (project is OwnedProject) return project.category.isNotEmpty ? project.category : const [];
+    if (project is request_model.Data) return project.project?.category ?? const [];
+    if (project is Map) {
+      final raw = project['category'] ?? project['project']?['category'];
+      if (raw is List) return List<String>.from(raw);
+    }
+    return const [];
+  }
+
+  String _projectStatusLabel(dynamic project) {
+    if (project is OwnedProject) return project.status ?? '';
+    if (project is request_model.Data) return project.project?.status ?? project.status ?? '';
+    if (project is Map) return project['status']?.toString() ?? project['project']?['status']?.toString() ?? '';
+    return '';
+  }
+
+  DateTime? _projectDeadline(dynamic project) {
+    if (project is OwnedProject) return project.deadline;
+    if (project is request_model.Data) {
+      // Request-collab items don't expose deadline in the current model, so use nested project data if available.
+      return null;
+    }
+    if (project is Map) {
+      final raw = project['deadline'] ?? project['project']?['deadline'];
+      if (raw == null) return null;
+      return DateTime.tryParse(raw.toString());
+    }
+    return null;
+  }
+
+  String _projectPicture(dynamic project) {
+    if (project is OwnedProject) return project.projectPicture ?? '';
+    if (project is request_model.Data) return project.project?.projectPicture ?? '';
+    if (project is Map) return project['projectPicture']?.toString() ?? project['project']?['projectPicture']?.toString() ?? '';
+    return '';
+  }
+
+  String _projectRepositoryLink(dynamic project) {
+    if (project is OwnedProject) return project.repositoryLink ?? '';
+    if (project is request_model.Data) return project.project?.repositoryLink ?? '';
+    if (project is Map) return project['repositoryLink']?.toString() ?? project['project']?['repositoryLink']?.toString() ?? '';
+    return '';
+  }
+
+  int _projectOwnerId(dynamic project) {
+    if (project is request_model.Data) return project.owner?.idPengguna ?? 0;
+    if (project is Map) {
+      final value = project['owner']?['idPengguna'] ?? project['owner']?['id'] ?? 0;
+      if (value is int) return value;
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+    return 0;
+  }
+
+  String _projectOwnerName(dynamic project) {
+    if (project is request_model.Data) return project.owner?.namaLengkap ?? 'Pemilik Kolaborasi';
+    if (project is Map) return project['owner']?['namaLengkap']?.toString() ?? project['owner']?['fullName']?.toString() ?? 'Pemilik Kolaborasi';
+    return 'Pemilik Kolaborasi';
+  }
+
+  String? _projectOwnerImage(dynamic project) {
+    if (project is request_model.Data) return project.owner?.profilePicture;
+    if (project is Map) return project['owner']?['profilePicture']?.toString();
+    return null;
+  }
+
   String _mapStatus(String? status) {
     if (status == null || status.isEmpty) return 'Belum Dimulai';
 
     // Jika status sudah dalam bahasa Indonesia, kembalikan
-    const statusOptions = ['Belum Dimulai', 'Sedang Berjalan', 'Selesai', 'Ditunda'];
+    const statusOptions = ['Belum Dimulai', 'Sedang Berjalan', 'Selesai', 'Project Berakhir', 'Ditunda'];
     if (statusOptions.contains(status)) return status;
 
     switch (status.toUpperCase()) {
       case 'OPEN':
         return 'Sedang Berjalan';
+      case 'COMPLETED':
+        return 'Project Berakhir';
       case 'DONE':
         return 'Selesai';
       case 'HOLD':
@@ -429,6 +570,8 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
         return Colors.green;
       case 'Selesai':
         return Colors.blue;
+      case 'Project Berakhir':
+        return Colors.purple;
       case 'Ditunda':
         return Colors.orange;
       case 'Belum Dimulai':
@@ -443,7 +586,7 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: ColorValue.primaryColor.withOpacity(0.08),
+        color: ColorValue.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

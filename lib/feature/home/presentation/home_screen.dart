@@ -8,6 +8,7 @@ import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../core/common/color_value.dart';
+import '../../search/presentation/search_result_screen.dart';
 import 'create_collaboration.dart';
 import 'detail_collaboration.dart';
 
@@ -22,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedCategoryIndex = 0;
   final ProfileRepository _profileRepository = ProfileRepositoryImpl();
   final CollaborationService _collaborationService = CollaborationService();
+  late TextEditingController _searchController;
 
   ViewProfileModel? _profile;
   List<Datum> _projects = [];
@@ -36,14 +38,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     return reversedProjects
         .where((project) =>
-            project.category == _categories[_selectedCategoryIndex])
+            project.category.contains(_categories[_selectedCategoryIndex]))
         .toList();
   }
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {
@@ -238,6 +247,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(
                         height: 50,
                         child: TextField(
+                          controller: _searchController,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SearchResultScreen(
+                                  initialQuery: _searchController.text,
+                                ),
+                              ),
+                            );
+                          },
+                          readOnly: true,
                           decoration: InputDecoration(
                             hintText: 'Cari Kolaborasi',
                             hintStyle: const TextStyle(
@@ -343,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
+                              color: Colors.black.withValues(alpha: 0.06),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -424,12 +445,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         memberImages: displayImages,
                         extraMembers: extraMembers,
                         projectTitle: item.title,
-                        projectType: item.category ?? 'General',
-                        projectDate: '-',
+                        projectType: item.category.isNotEmpty ? item.category.first : 'General',
+                        projectDate: item.deadline != null ? '${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}' : '-',
+                        deadline: item.deadline,
                         projectDescription: item.description,
-                        skills: [
-                          item.category ?? 'General',
-                        ],
+                        skills: item.category.isNotEmpty ? item.category : const ['General'],
                         onTap: () async {
                           final result = await Navigator.push(
                             context,

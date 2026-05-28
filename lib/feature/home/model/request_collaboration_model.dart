@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'category_parser.dart';
+
 RequestCollaborationModel requestCollaborationModelFromJson(String str) => RequestCollaborationModel.fromJson(json.decode(str));
 
 String requestCollaborationModelToJson(RequestCollaborationModel data) => json.encode(data.toJson());
@@ -97,7 +99,7 @@ class Owner {
 }
 
 class Project {
-  String? category;
+  List<String> category;
   String? description;
   int? projectId;
   String? projectPicture;
@@ -106,7 +108,7 @@ class Project {
   String? title;
 
   Project({
-    this.category,
+    this.category = const [],
     this.description,
     this.projectId,
     this.projectPicture,
@@ -116,7 +118,7 @@ class Project {
   });
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
-    category: json["category"]?.toString(),
+    category: parseCategoryList(json["category"]),
     description: json["description"]?.toString(),
     projectId: json["projectId"] is int ? json["projectId"] : int.tryParse(json["projectId"]?.toString() ?? ''),
     projectPicture: json["projectPicture"]?.toString(),

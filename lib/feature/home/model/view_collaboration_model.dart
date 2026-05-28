@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'category_parser.dart';
+
 ViewCollaborationModel viewCollaborationModelFromJson(String str) => ViewCollaborationModel.fromJson(json.decode(str));
 
 String viewCollaborationModelToJson(ViewCollaborationModel data) => json.encode(data.toJson());
@@ -97,32 +99,35 @@ class Owner {
 }
 
 class Project {
-  String? category;
+  List<String> category;
   String? description;
   int? projectId;
   String? projectPicture;
   String? repositoryLink;
   String? status;
   String? title;
+  DateTime? deadline;
 
   Project({
-    this.category,
+    this.category = const [],
     this.description,
     this.projectId,
     this.projectPicture,
     this.repositoryLink,
     this.status,
     this.title,
+    this.deadline,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
-    category: json["category"]?.toString(),
+    category: parseCategoryList(json["category"]),
     description: json["description"]?.toString(),
     projectId: json["projectId"] is int ? json["projectId"] : int.tryParse(json["projectId"]?.toString() ?? ''),
     projectPicture: json["projectPicture"]?.toString(),
     repositoryLink: json["repositoryLink"]?.toString(),
     status: json["status"]?.toString(),
     title: json["title"]?.toString(),
+    deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"].toString()) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -133,5 +138,6 @@ class Project {
     "repositoryLink": repositoryLink,
     "status": status,
     "title": title,
+    "deadline": deadline?.toIso8601String(),
   };
 }

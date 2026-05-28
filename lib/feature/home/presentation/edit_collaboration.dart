@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../../core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
+import 'package:gabungyuk/feature/rating/bloc/rating_bloc.dart';
+import 'package:gabungyuk/feature/rating/repository/rating_repository.dart';
+import 'package:gabungyuk/feature/rating/presentation/rating_collaborators_dialog.dart';
 
 // Model data kolaborasi yang akan diedit
 class CollaborationData {
   final String? id;
   final String title;
   final String description;
-  final String category;
+  final List<String> category;
   final String status;
   final String repositoryLink;
   final String? imageUrl;
+  final DateTime? deadline;
 
   const CollaborationData({
     this.id,
@@ -24,6 +29,7 @@ class CollaborationData {
     required this.status,
     required this.repositoryLink,
     this.imageUrl,
+    this.deadline,
   });
 }
 
@@ -42,15 +48,18 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   late final TextEditingController _descController;
   late final TextEditingController _categoryController;
   late final TextEditingController _repoController;
+  final List<String> _selectedCategories = [];
 
   late String _selectedStatus;
   String? _newImagePath; // path lokal jika user ganti gambar
   late String? _existingImageUrl;
+  DateTime? _selectedDeadline;
 
   final List<String> _statusOptions = [
     'Belum Dimulai',
     'Sedang Berjalan',
     'Selesai',
+    'Project Berakhir',
     'Ditunda',
   ];
 
@@ -59,7 +68,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     title: 'Moneyger Application Project',
     description:
     'Moneyger adalah sebuah platform aplikasi untuk mengelola keuangan dengan mudah. Aplikasi ini juga menawarkan berbagai fitur yang dapat membantu masyarakat mempermudah produktivitas mereka.',
-    category: 'Portofolio project',
+    category: ['Portofolio project'],
     status: 'Sedang Berjalan',
     repositoryLink: 'https://github.com/example/moneyger',
     imageUrl:
@@ -72,10 +81,12 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     final data = widget.initialData ?? _dummy;
     _titleController = TextEditingController(text: data.title);
     _descController = TextEditingController(text: data.description);
-    _categoryController = TextEditingController(text: data.category);
+    _categoryController = TextEditingController();
+    _selectedCategories.addAll(data.category);
     _repoController = TextEditingController(text: data.repositoryLink);
     _selectedStatus = _mapBackendStatus(data.status);
     _existingImageUrl = data.imageUrl;
+      _selectedDeadline = data.deadline;
   }
 
   String _mapBackendStatus(String? status) {
@@ -85,6 +96,8 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     switch (status.toUpperCase()) {
       case 'OPEN':
         return 'Sedang Berjalan';
+      case 'COMPLETED':
+        return 'Project Berakhir';
       case 'DONE':
         return 'Selesai';
       case 'HOLD':
@@ -110,8 +123,29 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     if (picked != null) setState(() => _newImagePath = picked.path);
   }
 
+  Future<void> _pickDeadline() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDeadline ?? DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDeadline = picked);
+    }
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    if (_categoryController.text.trim().isNotEmpty) {
+      _addCategory(_categoryController.text);
+    }
+
+    if (_selectedCategories.isEmpty) {
+      AuthUiHelper.showError(context, 'Kategori wajib diisi.');
+      return;
+    }
 
     final id = widget.initialData?.id;
     if (id == null) {
@@ -119,6 +153,21 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
       AuthUiHelper.showError(context, 'ID kolaborasi tidak tersedia.');
       return;
     }
+
+    final backendStatus = _mapToBackendStatus(_selectedStatus);
+
+    // Determine previous backend status robustly: if initialData.status is
+    // already a backend code (e.g. "COMPLETED") use it, otherwise map it.
+    final prevStatusRaw = widget.initialData?.status ?? '';
+    final prevBackendStatus = (prevStatusRaw.toUpperCase() == 'OPEN' ||
+            prevStatusRaw.toUpperCase() == 'COMPLETED' ||
+            prevStatusRaw.toUpperCase() == 'DONE' ||
+            prevStatusRaw.toUpperCase() == 'HOLD' ||
+            prevStatusRaw.toUpperCase() == 'NOT OPEN')
+        ? prevStatusRaw.toUpperCase()
+        : _mapToBackendStatus(prevStatusRaw);
+
+    final isChangingToCompleted = backendStatus == 'COMPLETED' && prevBackendStatus != 'COMPLETED';
 
     showDialog(
       context: context,
@@ -135,16 +184,51 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         id: id,
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
-        category: _categoryController.text.trim(),
-        status: _mapToBackendStatus(_selectedStatus),
+        category: _selectedCategories,
+        status: backendStatus,
         repositoryLink: _repoController.text.trim(),
         imagePath: _newImagePath,
+        deadline: _selectedDeadline,
       );
 
       if (!mounted) return;
       Navigator.of(context).pop(); // remove loading
-      AuthUiHelper.showSuccess(context, 'Perubahan berhasil disimpan.');
-      Navigator.of(context).pop(true);
+
+      // If status changed to COMPLETED, show rating dialog
+      if (isChangingToCompleted) {
+        // Fetch project details to get collaborators
+        try {
+          final projectDetail = await CollaborationService().getProjectDetail(int.parse(id));
+          final collaborators = projectDetail.data.collaborators;
+
+          if (!mounted) return;
+
+          if (collaborators.isEmpty) {
+            AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+            Navigator.of(context).pop(true);
+          } else {
+            // Convert collaborators to CollaboratorInfo
+            final collaboratorInfos = collaborators
+                .map((c) => CollaboratorInfo(
+                  userId: c.idPengguna,
+                  userName: c.namaLengkap,
+                  profilePicture: c.profilePicture,
+                  role: c.role,
+                ))
+                .toList();
+
+            // Show rating dialog
+            _showRatingDialog(collaboratorInfos, int.parse(id));
+          }
+        } catch (e) {
+          if (!mounted) return;
+          AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        AuthUiHelper.showSuccess(context, 'Perubahan berhasil disimpan.');
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -152,12 +236,39 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     }
   }
 
+  void _showRatingDialog(
+    List<CollaboratorInfo> collaborators,
+    int projectId,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BlocProvider<RatingBloc>(
+        create: (context) => RatingBloc(
+          ratingRepository: RatingRepositoryImpl(),
+        ),
+        child: RatingCollaboratorsDialog(
+          projectId: projectId,
+          collaborators: collaborators,
+          onComplete: () {
+            AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ),
+    );
+  }
+
   String _mapToBackendStatus(String label) {
     switch (label) {
       case 'Sedang Berjalan':
         return 'OPEN';
       case 'Selesai':
+        // 'Selesai' corresponds to backend 'DONE'
         return 'DONE';
+      case 'Project Berakhir':
+        // 'Project Berakhir' is the state when project is completed by owner
+        return 'COMPLETED';
       case 'Ditunda':
         return 'HOLD';
       case 'Belum Dimulai':
@@ -173,12 +284,16 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         return Colors.green;
       case 'Selesai':
         return Colors.blue;
+      case 'Project Berakhir':
+        return Colors.purple;
       case 'Ditunda':
         return Colors.orange;
       default:
         return Colors.grey;
     }
   }
+
+  bool get _isStatusLocked => _selectedStatus == 'Project Berakhir';
 
   @override
   Widget build(BuildContext context) {
@@ -267,7 +382,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
+                                  color: Colors.black.withValues(alpha: 0.55),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: const Row(
@@ -334,38 +449,43 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
 
                       const SizedBox(height: 16),
 
-                      // Kategori
-                      _buildLabel('Kategori'),
-                      const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _categoryController,
-                        hint: 'Tambahkan Kategori',
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Kategori wajib diisi'
-                            : null,
-                      ),
+                       // Repository Link
+                       _buildLabel('Repository Link'),
+                       const SizedBox(height: 6),
+                       _buildTextField(
+                         controller: _repoController,
+                         hint: 'https://github.com/...',
+                         keyboardType: TextInputType.url,
+                         prefixIcon: Icons.code_rounded,
+                         validator: (v) => (v == null || v.isEmpty)
+                             ? 'Link repository wajib diisi'
+                             : null,
+                       ),
 
                       const SizedBox(height: 16),
 
-                      // Status
-                      _buildLabel('Status'),
+                       // Kategori
+                       _buildLabel('Kategori'),
                       const SizedBox(height: 6),
-                      _buildStatusDropdown(),
+                       _buildCategoryInput(),
 
-                      const SizedBox(height: 16),
+                       const SizedBox(height: 16),
 
-                      // Repository Link
-                      _buildLabel('Repository Link'),
-                      const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _repoController,
-                        hint: 'https://github.com/...',
-                        keyboardType: TextInputType.url,
-                        prefixIcon: Icons.code_rounded,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Link repository wajib diisi'
-                            : null,
-                      ),
+                       // Deadline
+                       _buildLabel('Deadline (Opsional)'),
+                       const SizedBox(height: 6),
+                       _buildDeadlineField(),
+
+                       const SizedBox(height: 16),
+
+                       // Status
+                       _buildLabel('Status'),
+                       const SizedBox(height: 6),
+                       _buildStatusDropdown(),
+
+                       const SizedBox(height: 16),
+
+                       // Repository Link (moved)
 
                       const SizedBox(height: 32),
 
@@ -510,7 +630,154 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     );
   }
 
+  Widget _buildCategoryInput() {
+    final categories = [
+      'Web Development',
+      'UI/UX Design',
+      'Mobile Dev',
+      'Back End',
+      'Data Science',
+      'Data Analyst',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ..._selectedCategories.map(
+                (cat) => Chip(
+                  label: Text(cat),
+                  onDeleted: () => setState(() => _selectedCategories.remove(cat)),
+                  backgroundColor: ColorValue.primaryColor.withValues(alpha: 0.1),
+                  deleteIcon: Icon(Icons.cancel, size: 16, color: ColorValue.primaryColor.withValues(alpha: 0.7)),
+                  labelStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: ColorValue.primaryColor,
+                  ),
+                ),
+              ),
+              IntrinsicWidth(
+                child: TextField(
+                  controller: _categoryController,
+                  style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: _selectedCategories.isEmpty ? 'Ketik lalu tekan enter' : null,
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  onChanged: (value) {
+                    if (value.isNotEmpty && (value.endsWith(' ') || value.endsWith(','))) {
+                      _addCategory(value.substring(0, value.length - 1));
+                    }
+                  },
+                  onSubmitted: _addCategory,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: categories.map((cat) {
+            final isSelected = _selectedCategories.contains(cat);
+            return ChoiceChip(
+              label: Text(cat),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    if (!_selectedCategories.contains(cat)) _selectedCategories.add(cat);
+                  } else {
+                    _selectedCategories.remove(cat);
+                  }
+                });
+              },
+              selectedColor: ColorValue.primaryColor.withValues(alpha: 0.1),
+              backgroundColor: Colors.white,
+              labelStyle: TextStyle(
+                fontSize: 12,
+                color: isSelected ? ColorValue.primaryColor : Colors.grey[600],
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected ? ColorValue.primaryColor : Colors.grey[300]!,
+                ),
+              ),
+              showCheckmark: false,
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _addCategory(String value) {
+    final clean = value.trim();
+    if (clean.isEmpty) {
+      _categoryController.clear();
+      return;
+    }
+    if (!_selectedCategories.contains(clean)) {
+      setState(() => _selectedCategories.add(clean));
+    }
+    _categoryController.clear();
+  }
+
   Widget _buildStatusDropdown() {
+    if (_isStatusLocked) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _statusColor(_selectedStatus),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedStatus,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: ColorValue.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(Icons.lock_rounded, size: 18, color: Colors.grey),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
@@ -637,6 +904,45 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeadlineField() {
+    return GestureDetector(
+      onTap: _pickDeadline,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                color: ColorValue.primaryColor, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedDeadline != null
+                    ? 'Deadline: ${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}'
+                    : 'Pilih tanggal deadline',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _selectedDeadline != null
+                      ? ColorValue.textPrimary
+                      : Colors.grey[500],
+                ),
+              ),
+            ),
+            if (_selectedDeadline != null)
+              GestureDetector(
+                onTap: () => setState(() => _selectedDeadline = null),
+                child: Icon(Icons.close_rounded, color: Colors.grey[500]),
+              ),
           ],
         ),
       ),

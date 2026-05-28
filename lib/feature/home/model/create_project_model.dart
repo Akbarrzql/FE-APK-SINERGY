@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'category_parser.dart';
+
 CreateProjectModel createProjectModelFromJson(String str) => CreateProjectModel.fromJson(json.decode(str));
 
 String createProjectModelToJson(CreateProjectModel data) => json.encode(data.toJson());
@@ -36,10 +38,11 @@ class Data {
   int id;
   String title;
   String description;
-  String category;
+  List<String> category;
   String status;
   String repositoryLink;
   String projectPicture;
+  DateTime? deadline;
 
   Data({
     required this.id,
@@ -49,16 +52,18 @@ class Data {
     required this.status,
     required this.repositoryLink,
     required this.projectPicture,
+    this.deadline,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
     id: json["id"],
     title: json["title"],
     description: json["description"],
-    category: json["category"],
+    category: parseCategoryList(json["category"]),
     status: json["status"],
     repositoryLink: json["repositoryLink"],
     projectPicture: json["projectPicture"],
+    deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"].toString()) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -69,5 +74,6 @@ class Data {
     "status": status,
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
+    "deadline": deadline?.toIso8601String(),
   };
 }

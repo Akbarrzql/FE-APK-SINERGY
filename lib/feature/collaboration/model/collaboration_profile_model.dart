@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 
+import '../../home/model/category_parser.dart';
 import '../../home/model/view_project_model.dart';
 
 CollaborationProfileModel collaborationProfileModelFromJson(String str) => CollaborationProfileModel.fromJson(json.decode(str));
@@ -58,32 +59,35 @@ class OwnedProject {
   int? id;
   String? title;
   String? description;
-  String? category;
+  List<String> category;
   String? status;
   String? repositoryLink;
   String? projectPicture;
   List<CollaboratorShort>? collaborators;
+  DateTime? deadline;
 
   OwnedProject({
     this.id,
     this.title,
     this.description,
-    this.category,
+    this.category = const [],
     this.status,
     this.repositoryLink,
     this.projectPicture,
     this.collaborators,
+    this.deadline,
   });
 
   factory OwnedProject.fromJson(Map<String, dynamic> json) => OwnedProject(
     id: json["id"],
     title: json["title"],
     description: json["description"],
-    category: json["category"],
+    category: parseCategoryList(json["category"]),
     status: json["status"],
     repositoryLink: json["repositoryLink"],
     projectPicture: json["projectPicture"],
     collaborators: json["collaborators"] == null ? [] : List<CollaboratorShort>.from(json["collaborators"]!.map((x) => CollaboratorShort.fromJson(x))),
+    deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"]) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -95,5 +99,6 @@ class OwnedProject {
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
     "collaborators": collaborators == null ? [] : List<dynamic>.from(collaborators!.map((x) => x.toJson())),
+    "deadline": deadline?.toIso8601String(),
   };
 }

@@ -29,10 +29,11 @@ class CollaborationService {
   Future<void> createProject({
     required String title,
     required String description,
-    required String category,
+    required List<String> category,
     required String status,
     required String repositoryLink,
     String? imagePath,
+    DateTime? deadline,
   }) async {
     final token = await _sharedCode.getAuthToken();
     final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/create/projects');
@@ -47,6 +48,7 @@ class CollaborationService {
       "category": category,
       "status": status,
       "repositoryLink": repositoryLink,
+      if (deadline != null) "deadline": deadline.toIso8601String(),
     };
     request.fields['data'] = jsonEncode(projectData);
 
@@ -77,10 +79,11 @@ class CollaborationService {
     required String id,
     required String title,
     required String description,
-    required String category,
+    required List<String> category,
     required String status,
     required String repositoryLink,
     String? imagePath,
+    DateTime? deadline,
   }) async {
     final token = await _sharedCode.getAuthToken();
     final apiUrl = Uri.parse('${ApiConfig.baseUrl}/api/v1/projects/$id');
@@ -94,6 +97,7 @@ class CollaborationService {
       "category": category,
       "status": status,
       "repositoryLink": repositoryLink,
+      if (deadline != null) "deadline": deadline.toIso8601String(),
     };
     request.fields['data'] = jsonEncode(projectData);
 

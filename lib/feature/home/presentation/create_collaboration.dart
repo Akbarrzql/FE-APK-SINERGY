@@ -20,9 +20,11 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   final _categoryController = TextEditingController();
   final _repoController = TextEditingController();
   final _urlController = TextEditingController();
+  final List<String> _selectedCategories = [];
 
   String _selectedStatus = 'Belum Dimulai';
   String? _imagePath; // ganti dengan File jika pakai image_picker
+  DateTime? _selectedDeadline;
 
   final List<String> _statusOptions = [
     'Belum Dimulai',
@@ -47,8 +49,29 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
     if (picked != null) setState(() => _imagePath = picked.path);
   }
 
+  Future<void> _pickDeadline() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDeadline ?? DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDeadline = picked);
+    }
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    if (_categoryController.text.trim().isNotEmpty) {
+      _addCategory(_categoryController.text);
+    }
+
+    if (_selectedCategories.isEmpty) {
+      AuthUiHelper.showError(context, 'Kategori wajib diisi.');
+      return;
+    }
 
     // Mapping UI status to Backend status if needed
     String backendStatus = "OPEN";
@@ -69,10 +92,11 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
       await CollaborationService().createProject(
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
-        category: _categoryController.text.trim(),
+        category: _selectedCategories,
         status: backendStatus,
         repositoryLink: _repoController.text.trim(),
         imagePath: _imagePath,
+        deadline: _selectedDeadline,
       );
 
       if (!mounted) return;
@@ -205,11 +229,33 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       const SizedBox(height: 16),
 
                       // Kategori
+                       // Repository Link
+                       _buildLabel('Repository Link'),
+                       const SizedBox(height: 6),
+                       _buildTextField(
+                         controller: _repoController,
+                         hint: 'https://github.com/...',
+                         keyboardType: TextInputType.url,
+                         prefixIcon: Icons.code_rounded,
+                         validator: (v) =>
+                         (v == null || v.isEmpty) ? 'Link repository wajib diisi' : null,
+                       ),
+
+                       const SizedBox(height: 16),
+
+                       // Kategori
                       _buildLabel('Kategori'),
                       const SizedBox(height: 6),
                       _buildCategoryInput(),
 
                       const SizedBox(height: 16),
+
+                       // Deadline
+                       _buildLabel('Deadline (Opsional)'),
+                       const SizedBox(height: 6),
+                       _buildDeadlineField(),
+
+                       const SizedBox(height: 16),
 
                       // Status
                       _buildLabel('Status'),
@@ -218,17 +264,6 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
 
                       const SizedBox(height: 16),
 
-                      // Repository Link
-                      _buildLabel('Repository Link'),
-                      const SizedBox(height: 6),
-                      _buildTextField(
-                        controller: _repoController,
-                        hint: 'https://github.com/...',
-                        keyboardType: TextInputType.url,
-                        prefixIcon: Icons.code_rounded,
-                        validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Link repository wajib diisi' : null,
-                      ),
 
                       const SizedBox(height: 32),
 
@@ -359,51 +394,75 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: _categoryController,
-          validator: (v) =>
-              (v == null || v.isEmpty) ? 'Kategori wajib diisi' : null,
-          style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Pilih atau ketik kategori',
-            hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
-            filled: true,
-            fillColor: Colors.grey[50],
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(
+        GestureDetector(
+          onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[200]!),
+              border: Border.all(color: Colors.grey[200]!),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[200]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: ColorValue.primaryColor, width: 1.5),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                ..._selectedCategories.map(
+                  (cat) => Chip(
+                    label: Text(cat),
+                    onDeleted: () => setState(() => _selectedCategories.remove(cat)),
+                    backgroundColor: ColorValue.primaryColor.withValues(alpha: 0.1),
+                    deleteIcon: Icon(Icons.cancel, size: 16, color: ColorValue.primaryColor.withValues(alpha: 0.7)),
+                    labelStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: ColorValue.primaryColor,
+                    ),
+                  ),
+                ),
+                IntrinsicWidth(
+                  child: TextField(
+                    controller: _categoryController,
+                    style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: _selectedCategories.isEmpty ? 'Ketik lalu tekan enter' : null,
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                    ),
+                    onChanged: (value) {
+                      if (value.isNotEmpty && (value.endsWith(' ') || value.endsWith(','))) {
+                        _addCategory(value.substring(0, value.length - 1));
+                      }
+                    },
+                    onSubmitted: _addCategory,
+                  ),
+                ),
+              ],
             ),
           ),
-          onChanged: (value) {
-            setState(() {});
-          },
         ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
-          runSpacing: 0,
+          runSpacing: 8,
           children: categories.map((cat) {
-            final isSelected = _categoryController.text == cat;
+            final isSelected = _selectedCategories.contains(cat);
             return ChoiceChip(
               label: Text(cat),
               selected: isSelected,
               onSelected: (selected) {
                 setState(() {
-                  _categoryController.text = cat;
+                  if (selected) {
+                    if (!_selectedCategories.contains(cat)) _selectedCategories.add(cat);
+                  } else {
+                    _selectedCategories.remove(cat);
+                  }
                 });
               },
-              selectedColor: ColorValue.primaryColor.withOpacity(0.1),
+              selectedColor: ColorValue.primaryColor.withValues(alpha: 0.1),
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
                 fontSize: 12,
@@ -422,6 +481,18 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
         ),
       ],
     );
+  }
+
+  void _addCategory(String value) {
+    final clean = value.trim();
+    if (clean.isEmpty) {
+      _categoryController.clear();
+      return;
+    }
+    if (!_selectedCategories.contains(clean)) {
+      setState(() => _selectedCategories.add(clean));
+    }
+    _categoryController.clear();
   }
 
   Widget _buildStatusDropdown() {
@@ -464,6 +535,45 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
           onChanged: (v) {
             if (v != null) setState(() => _selectedStatus = v);
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeadlineField() {
+    return GestureDetector(
+      onTap: _pickDeadline,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                color: ColorValue.primaryColor, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedDeadline != null
+                    ? 'Deadline: ${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}'
+                    : 'Pilih tanggal deadline',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _selectedDeadline != null
+                      ? ColorValue.textPrimary
+                      : Colors.grey[500],
+                ),
+              ),
+            ),
+            if (_selectedDeadline != null)
+              GestureDetector(
+                onTap: () => setState(() => _selectedDeadline = null),
+                child: Icon(Icons.close_rounded, color: Colors.grey[500]),
+              ),
+          ],
         ),
       ),
     );

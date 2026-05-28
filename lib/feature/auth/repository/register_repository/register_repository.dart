@@ -29,7 +29,6 @@ class RegisterRepositoryImpl implements RegisterRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-
   @override
   Future<FirebaseRegisterResult> registerUser({
     required String name,
@@ -57,7 +56,8 @@ class RegisterRepositoryImpl implements RegisterRepository {
       await user.reload();
 
       // ✅ Get fresh Firebase ID Token
-      final idToken = await FirebaseAuthTokenService.instance.getIdTokenWithRefresh();
+      final idToken = await FirebaseAuthTokenService.instance
+          .getIdTokenWithRefresh();
       if (idToken == null) {
         throw Exception('Gagal mendapatkan ID Token');
       }
@@ -105,7 +105,8 @@ class RegisterRepositoryImpl implements RegisterRepository {
       }
 
       // ✅ Get fresh Firebase ID Token
-      final idToken = await FirebaseAuthTokenService.instance.getTokenFromGoogleSignIn();
+      final idToken = await FirebaseAuthTokenService.instance
+          .getTokenFromGoogleSignIn();
       if (idToken == null) {
         throw Exception('Gagal mendapatkan ID Token dari Google');
       }
@@ -170,7 +171,9 @@ class RegisterRepositoryImpl implements RegisterRepository {
       );
 
       if (kDebugMode) {
-        debugPrint('REGISTER: User profile synced to Firestore (UID & Email docs)');
+        debugPrint(
+          'REGISTER: User profile synced to Firestore (UID & Email docs)',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -182,15 +185,14 @@ class RegisterRepositoryImpl implements RegisterRepository {
 
   /// ✅ Convert Firebase Auth error ke pesan user-friendly
   String _getReadableAuthError(String errorCode) {
-    return AuthUiHelper.toIndonesianMessage(
-      switch (errorCode) {
-        'weak-password' => 'Password terlalu lemah. Gunakan minimal 6 karakter.',
-        'email-already-in-use' => 'Email sudah terdaftar. Silakan login atau gunakan email lain.',
-        'invalid-email' => 'Format email tidak valid.',
-        'operation-not-allowed' => 'Operasi tidak diizinkan. Hubungi admin.',
-        'too-many-requests' => 'Terlalu banyak percobaan. Coba lagi nanti.',
-        _ => 'Gagal mendaftar. Silakan coba lagi.',
-      },
-    );
+    return AuthUiHelper.toIndonesianMessage(switch (errorCode) {
+      'weak-password' => 'Password terlalu lemah. Gunakan minimal 6 karakter.',
+      'email-already-in-use' =>
+        'Email sudah terdaftar. Silakan login atau gunakan email lain.',
+      'invalid-email' => 'Format email tidak valid.',
+      'operation-not-allowed' => 'Operasi tidak diizinkan. Hubungi admin.',
+      'too-many-requests' => 'Terlalu banyak percobaan. Coba lagi nanti.',
+      _ => 'Gagal mendaftar. Silakan coba lagi.',
+    });
   }
 }

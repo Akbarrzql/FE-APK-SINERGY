@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-import 'package:gabungyuk/feature/auth/repository/register_repository/register_repository.dart';
+import '../../repository/register_repository/register_repository.dart';
 
 @immutable
 abstract class RegisterPageState {}

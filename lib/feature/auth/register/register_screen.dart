@@ -61,21 +61,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFFFFFFF),
         body: BlocConsumer<RegisterPageBloc, RegisterPageState>(
-           listener: (context, state) {
-             if (state is RegisterPageLoaded) {
-                FocusManager.instance.primaryFocus?.unfocus();
+          listener: (context, state) {
+            if (state is RegisterPageLoaded) {
+              FocusManager.instance.primaryFocus?.unfocus();
 
-
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BottomNavigation(),
-                  ),
-                );
-              } else if (state is RegisterPageError) {
-               AuthUiHelper.showError(context, state.errorMessage);
-             }
-           },
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BottomNavigation(),
+                ),
+              );
+            } else if (state is RegisterPageError) {
+              AuthUiHelper.showError(context, state.errorMessage);
+            }
+          },
           builder: (context, state) {
             return _buildInitialLayout(context, state);
           },
@@ -179,7 +178,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text('Lupa Password?', style: TextStyle(color: Color(0xFF2F80ED))),
+                      child: const Text(
+                        'Lupa Password?',
+                        style: TextStyle(color: Color(0xFF2F80ED)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -193,12 +195,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               FocusManager.instance.primaryFocus?.unfocus();
                               if (_formKey.currentState!.validate()) {
                                 context.read<RegisterPageBloc>().add(
-                                      RegisterButtonPressed(
-                                        name: _nameController.text.trim(),
-                                        email: _emailController.text.trim(),
-                                        password: _passwordController.text,
-                                      ),
-                                    );
+                                  RegisterButtonPressed(
+                                    name: _nameController.text.trim(),
+                                    email: _emailController.text.trim(),
+                                    password: _passwordController.text,
+                                  ),
+                                );
                               }
                             },
                       style: ElevatedButton.styleFrom(
@@ -215,8 +217,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -234,7 +237,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
-
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: const BorderSide(
@@ -251,8 +253,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.black),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.black,
+                                ),
                               ),
                             )
                           : const Row(
@@ -273,18 +276,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ? null
                           : () async {
                               try {
-                                await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
+                                await FirebaseIntegrationService.instance
+                                    .signInWithGoogleAndSync(context);
                               } catch (e) {
                                 AuthUiHelper.showError(
                                   context,
                                   AuthUiHelper.readableError(
                                     e,
-                                    fallback: 'Gagal masuk dengan Google. Silakan coba lagi.',
+                                    fallback:
+                                        'Gagal masuk dengan Google. Silakan coba lagi.',
                                   ),
                                 );
                               }
                             },
-                    )
+                    ),
                   ),
                   const SizedBox(height: 40),
                   Row(
@@ -382,41 +387,25 @@ class _AuthTextField extends StatelessWidget {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: borderColor,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: borderColor, width: 1.2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: borderColor,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: borderColor, width: 1.2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color(0xFF2F80ED),
-            width: 1.4,
-          ),
+          borderSide: const BorderSide(color: Color(0xFF2F80ED), width: 1.4),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 1.2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 1.2),
         ),
       ),
     );
   }
 }
-

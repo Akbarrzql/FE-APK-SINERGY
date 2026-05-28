@@ -19,6 +19,7 @@ import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
+import 'package:gabungyuk/feature/portofolio/presentation/screen/portofolio_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool hideMenus;
@@ -156,11 +157,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: StatCard(
                     title: 'Portofolio',
                     icon: Icons.grid_view_rounded,
-                    onTap: () => debugPrint('Pindah ke halaman Portofolio'),
+                    onTap: () {
+                      debugPrint('Pindah ke halaman Portofolio');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PortofolioScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ],
-            ),
+              ], // 👈 Ini kurung penutup Row yang tadi hilang!
+            ), // 👈 Ini kurung penutup Padding yang tadi hilang!
           ),
 
           const SizedBox(height: 20),

@@ -1,34 +1,39 @@
-// To parse this JSON data, do
-//
-//     final registerModel = registerModelFromJson(jsonString);
-
 import 'dart:convert';
 
-RegisterModel registerModelFromJson(String str) => RegisterModel.fromJson(json.decode(str));
+RegisterModel registerModelFromJson(String str) =>
+    RegisterModel.fromJson(json.decode(str));
 
 String registerModelToJson(RegisterModel data) => json.encode(data.toJson());
 
 class RegisterModel {
-  int status;
-  String message;
-  Data data;
+  int? status;
+  String? message;
+  String? error;
+  String? details;
+  Data? data;
 
   RegisterModel({
-    required this.status,
-    required this.message,
-    required this.data,
+    this.status,
+    this.message,
+    this.error,
+    this.details,
+    this.data,
   });
 
   factory RegisterModel.fromJson(Map<String, dynamic> json) => RegisterModel(
     status: json["status"],
     message: json["message"],
-    data: Data.fromJson(json["data"]),
+    error: json["error"],
+    details: json["details"],
+    data: json["data"] != null ? Data.fromJson(json["data"]) : null,
   );
 
   Map<String, dynamic> toJson() => {
     "status": status,
     "message": message,
-    "data": data.toJson(),
+    "error": error,
+    "details": details,
+    "data": data?.toJson(),
   };
 }
 
@@ -74,7 +79,9 @@ class Data {
     profilePicture: json["profilePicture"],
     institusi: json["institusi"],
     bio: json["bio"],
-    keahlian: json["keahlian"] == null ? null : List<String>.from(json["keahlian"].map((x) => x)),
+    keahlian: json["keahlian"] == null
+        ? null
+        : List<String>.from(json["keahlian"].map((x) => x)),
     lokasi: json["lokasi"],
     whatsapp: json["whatsapp"],
     instagram: json["instagram"],
@@ -91,7 +98,9 @@ class Data {
     "profilePicture": profilePicture,
     "institusi": institusi,
     "bio": bio,
-    "keahlian": keahlian == null ? null : List<dynamic>.from(keahlian!.map((x) => x)),
+    "keahlian": keahlian == null
+        ? null
+        : List<dynamic>.from(keahlian!.map((x) => x)),
     "lokasi": lokasi,
     "whatsapp": whatsapp,
     "instagram": instagram,

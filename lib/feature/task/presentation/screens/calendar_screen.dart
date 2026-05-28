@@ -9,12 +9,9 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  // 1. STATE LOGIKA
   DateTime focusedDate = DateTime.now();
-  int selectedDay = DateTime.now().day;
+  int? selectedDay; // ← nullable, default tidak ada yang dipilih
 
-  // 2. DATA MASTER EVENT (Model Data)
-  // Ini adalah sumber data tunggal. Titik di kalender dan daftar di bawah akan mengambil dari sini.
   final List<Map<String, dynamic>> allEvents = [
     {
       "date": DateTime(2026, 5, 12),
@@ -63,10 +60,45 @@ class _CalendarScreenState extends State<CalendarScreen> {
     'Desember',
   ];
 
+  // Cek apakah tanggal ini punya event
+  bool _hasEvent(int day) {
+    return allEvents.any(
+      (e) =>
+          e['date'].day == day &&
+          e['date'].month == focusedDate.month &&
+          e['date'].year == focusedDate.year,
+    );
+  }
+
+  // Ambil event berdasarkan tanggal yang dipilih
+  List<Map<String, dynamic>> _getEventsByDay(int day) {
+    return allEvents
+        .where(
+          (e) =>
+              e['date'].day == day &&
+              e['date'].month == focusedDate.month &&
+              e['date'].year == focusedDate.year,
+        )
+        .toList();
+  }
+
+  // Ambil semua event di bulan yang sedang ditampilkan
+  List<Map<String, dynamic>> _getMonthlyEvents() {
+    final events = allEvents
+        .where(
+          (e) =>
+              e['date'].month == focusedDate.month &&
+              e['date'].year == focusedDate.year,
+        )
+        .toList();
+    events.sort((a, b) => a['date'].compareTo(b['date']));
+    return events;
+  }
+
   void _showMonthYearPicker() {
     int currentYear = DateTime.now().year;
     int startYear = currentYear - 5;
-    int totalYears = 5 + 1 + 10;
+    int totalYears = 16;
 
     showModalBottomSheet(
       context: context,
@@ -173,7 +205,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           ),
                         ),
                         onPressed: () {
-                          setState(() => focusedDate = tempDate);
+                          setState(() {
+                            focusedDate = tempDate;
+                            selectedDay =
+                                null; // reset pilihan saat ganti bulan
+                          });
                           Navigator.pop(context);
                         },
                         child: Text(
@@ -190,6 +226,90 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  // Bottom sheet View All — tampil semua event bulan ini
+  void _showViewAll() {
+    final monthlyEvents = _getMonthlyEvents();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 15, bottom: 10),
+                height: 5,
+                width: 50,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Semua Event ${months[focusedDate.month - 1]} ${focusedDate.year}',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: monthlyEvents.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Tidak ada event di bulan ini',
+                          style: GoogleFonts.poppins(color: Colors.grey),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: monthlyEvents.length,
+                        itemBuilder: (context, index) {
+                          final event = monthlyEvents[index];
+                          DateTime date = event['date'];
+                          String dateText =
+                              "${date.day} ${months[date.month - 1]} ${date.year}";
+                          return _eventTile(
+                            dateText,
+                            event['title'],
+                            event['time'],
+                            event['color'],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -262,22 +382,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
           children: [
             _circleNav(
               Icons.chevron_left,
-              () => setState(
-                () => focusedDate = DateTime(
-                  focusedDate.year,
-                  focusedDate.month - 1,
-                ),
-              ),
+              () => setState(() {
+                focusedDate = DateTime(focusedDate.year, focusedDate.month - 1);
+                selectedDay = null; // reset saat ganti bulan
+              }),
             ),
             const SizedBox(width: 10),
             _circleNav(
               Icons.chevron_right,
-              () => setState(
-                () => focusedDate = DateTime(
-                  focusedDate.year,
-                  focusedDate.month + 1,
-                ),
-              ),
+              () => setState(() {
+                focusedDate = DateTime(focusedDate.year, focusedDate.month + 1);
+                selectedDay = null; // reset saat ganti bulan
+              }),
             ),
           ],
         ),
@@ -330,17 +446,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
       itemBuilder: (context, index) {
         int day = index + 1;
         bool isSelected = day == selectedDay;
-
-        // Logika Titik: Cek apakah ada event di tanggal, bulan, dan tahun ini
-        bool hasTask = allEvents.any(
-          (e) =>
-              e['date'].day == day &&
-              e['date'].month == focusedDate.month &&
-              e['date'].year == focusedDate.year,
-        );
+        bool hasEvent = _hasEvent(day);
 
         return GestureDetector(
-          onTap: () => setState(() => selectedDay = day),
+          onTap: () {
+            // Semua tanggal bisa di-tap
+            setState(() => selectedDay = day);
+          },
           child: Column(
             children: [
               Container(
@@ -363,7 +475,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
               ),
-              if (hasTask && !isSelected)
+              if (hasEvent && !isSelected)
                 Container(
                   margin: const EdgeInsets.only(top: 4),
                   width: 4,
@@ -381,17 +493,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildEventSection() {
-    // FILTER: Hanya ambil event yang bulan dan tahunnya sesuai dengan kalender
-    final monthlyEvents = allEvents
-        .where(
-          (e) =>
-              e['date'].month == focusedDate.month &&
-              e['date'].year == focusedDate.year,
-        )
-        .toList();
-
-    // Urutkan berdasarkan tanggal terkecil
-    monthlyEvents.sort((a, b) => a['date'].compareTo(b['date']));
+    // Kalau ada tanggal dipilih → tampil event di tanggal itu
+    // Kalau tidak ada → tampil teks info
+    final List<Map<String, dynamic>> eventsToShow = selectedDay != null
+        ? _getEventsByDay(selectedDay!)
+        : [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,34 +512,70 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 fontSize: 20,
               ),
             ),
-            Text(
-              'View all',
-              style: GoogleFonts.poppins(
-                color: const Color(0xFF1E6AF9),
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+            GestureDetector(
+              onTap:
+                  _showViewAll, // ← tap view all buka bottom sheet semua event
+              child: Text(
+                'View all',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF1E6AF9),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 20),
-        if (monthlyEvents.isEmpty)
+
+        // Kalau belum ada tanggal dipilih
+        if (selectedDay == null)
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text(
-                "No events for this month",
-                style: GoogleFonts.poppins(color: Colors.grey),
+              child: Column(
+                children: [
+                  const Icon(Icons.touch_app, color: Colors.grey, size: 40),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap tanggal untuk melihat event',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
             ),
           )
+        // Tanggal dipilih tapi tidak ada event
+        else if (eventsToShow.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                children: [
+                  const Icon(Icons.event_busy, color: Colors.grey, size: 40),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tidak ada event di tanggal $selectedDay\n${months[focusedDate.month - 1]} ${focusedDate.year}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        // Tampil event di tanggal yang dipilih
         else
-          ...monthlyEvents.map((event) {
+          ...eventsToShow.map((event) {
             DateTime date = event['date'];
-            // Format tanggal Indonesia sederhana
             String dateText =
                 "${date.day} ${months[date.month - 1]} ${date.year}";
-
             return _eventTile(
               dateText,
               event['title'],

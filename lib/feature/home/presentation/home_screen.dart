@@ -364,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
+                              color: Colors.black.withValues(alpha: 0.06),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -446,7 +446,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         extraMembers: extraMembers,
                         projectTitle: item.title,
                         projectType: item.category.isNotEmpty ? item.category.first : 'General',
-                        projectDate: '-',
+                        projectDate: item.deadline != null ? '${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}' : '-',
+                        deadline: item.deadline,
                         projectDescription: item.description,
                         skills: item.category.isNotEmpty ? item.category : const ['General'],
                         onTap: () async {

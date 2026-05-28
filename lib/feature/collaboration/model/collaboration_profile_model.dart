@@ -64,6 +64,7 @@ class OwnedProject {
   String? repositoryLink;
   String? projectPicture;
   List<CollaboratorShort>? collaborators;
+  DateTime? deadline;
 
   OwnedProject({
     this.id,
@@ -74,6 +75,7 @@ class OwnedProject {
     this.repositoryLink,
     this.projectPicture,
     this.collaborators,
+    this.deadline,
   });
 
   factory OwnedProject.fromJson(Map<String, dynamic> json) => OwnedProject(
@@ -85,6 +87,7 @@ class OwnedProject {
     repositoryLink: json["repositoryLink"],
     projectPicture: json["projectPicture"],
     collaborators: json["collaborators"] == null ? [] : List<CollaboratorShort>.from(json["collaborators"]!.map((x) => CollaboratorShort.fromJson(x))),
+    deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"]) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -96,5 +99,6 @@ class OwnedProject {
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
     "collaborators": collaborators == null ? [] : List<dynamic>.from(collaborators!.map((x) => x.toJson())),
+    "deadline": deadline?.toIso8601String(),
   };
 }

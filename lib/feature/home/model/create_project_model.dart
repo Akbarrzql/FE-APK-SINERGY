@@ -42,6 +42,7 @@ class Data {
   String status;
   String repositoryLink;
   String projectPicture;
+  DateTime? deadline;
 
   Data({
     required this.id,
@@ -51,6 +52,7 @@ class Data {
     required this.status,
     required this.repositoryLink,
     required this.projectPicture,
+    this.deadline,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -61,6 +63,7 @@ class Data {
     status: json["status"],
     repositoryLink: json["repositoryLink"],
     projectPicture: json["projectPicture"],
+    deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"].toString()) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -71,5 +74,6 @@ class Data {
     "status": status,
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
+    "deadline": deadline?.toIso8601String(),
   };
 }

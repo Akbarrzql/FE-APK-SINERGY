@@ -148,6 +148,7 @@ class Project {
   String status;
   String repositoryLink;
   String projectPicture;
+  DateTime? deadline;
 
   Project({
     required this.projectId,
@@ -157,6 +158,7 @@ class Project {
     required this.status,
     required this.repositoryLink,
     required this.projectPicture,
+    this.deadline,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
@@ -167,6 +169,7 @@ class Project {
     status: json["status"]?.toString() ?? '',
     repositoryLink: json["repositoryLink"]?.toString() ?? '',
     projectPicture: json["projectPicture"]?.toString() ?? '',
+    deadline: json["deadline"] != null ? DateTime.tryParse(json["deadline"].toString()) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -177,5 +180,6 @@ class Project {
     "status": status,
     "repositoryLink": repositoryLink,
     "projectPicture": projectPicture,
+    "deadline": deadline?.toIso8601String(),
   };
 }

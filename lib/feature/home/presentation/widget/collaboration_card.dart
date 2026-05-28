@@ -14,6 +14,7 @@ class CollaborationCard extends StatelessWidget {
   final String projectTitle;
   final String projectType;
   final String projectDate;
+  final DateTime? deadline;
   final String projectDescription;
   final List<String> skills;
   final VoidCallback? onTap;
@@ -30,6 +31,7 @@ class CollaborationCard extends StatelessWidget {
     required this.projectTitle,
     required this.projectType,
     required this.projectDate,
+    this.deadline,
     required this.projectDescription,
     required this.skills,
     this.onTap,
@@ -47,7 +49,7 @@ class CollaborationCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -134,6 +136,7 @@ class CollaborationCard extends StatelessWidget {
                 ),
               ],
             ),
+
 
             const SizedBox(height: 10),
 

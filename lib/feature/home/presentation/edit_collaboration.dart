@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../../core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
+import 'package:gabungyuk/feature/rating/bloc/rating_bloc.dart';
+import 'package:gabungyuk/feature/rating/repository/rating_repository.dart';
+import 'package:gabungyuk/feature/rating/presentation/rating_collaborators_dialog.dart';
 
 // Model data kolaborasi yang akan diedit
 class CollaborationData {
@@ -55,6 +59,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     'Belum Dimulai',
     'Sedang Berjalan',
     'Selesai',
+    'Project Berakhir',
     'Ditunda',
   ];
 
@@ -91,6 +96,8 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     switch (status.toUpperCase()) {
       case 'OPEN':
         return 'Sedang Berjalan';
+      case 'COMPLETED':
+        return 'Project Berakhir';
       case 'DONE':
         return 'Selesai';
       case 'HOLD':
@@ -147,6 +154,21 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
       return;
     }
 
+    final backendStatus = _mapToBackendStatus(_selectedStatus);
+
+    // Determine previous backend status robustly: if initialData.status is
+    // already a backend code (e.g. "COMPLETED") use it, otherwise map it.
+    final prevStatusRaw = widget.initialData?.status ?? '';
+    final prevBackendStatus = (prevStatusRaw.toUpperCase() == 'OPEN' ||
+            prevStatusRaw.toUpperCase() == 'COMPLETED' ||
+            prevStatusRaw.toUpperCase() == 'DONE' ||
+            prevStatusRaw.toUpperCase() == 'HOLD' ||
+            prevStatusRaw.toUpperCase() == 'NOT OPEN')
+        ? prevStatusRaw.toUpperCase()
+        : _mapToBackendStatus(prevStatusRaw);
+
+    final isChangingToCompleted = backendStatus == 'COMPLETED' && prevBackendStatus != 'COMPLETED';
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -163,7 +185,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         category: _selectedCategories,
-        status: _mapToBackendStatus(_selectedStatus),
+        status: backendStatus,
         repositoryLink: _repoController.text.trim(),
         imagePath: _newImagePath,
         deadline: _selectedDeadline,
@@ -171,8 +193,42 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
 
       if (!mounted) return;
       Navigator.of(context).pop(); // remove loading
-      AuthUiHelper.showSuccess(context, 'Perubahan berhasil disimpan.');
-      Navigator.of(context).pop(true);
+
+      // If status changed to COMPLETED, show rating dialog
+      if (isChangingToCompleted) {
+        // Fetch project details to get collaborators
+        try {
+          final projectDetail = await CollaborationService().getProjectDetail(int.parse(id));
+          final collaborators = projectDetail.data.collaborators;
+
+          if (!mounted) return;
+
+          if (collaborators.isEmpty) {
+            AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+            Navigator.of(context).pop(true);
+          } else {
+            // Convert collaborators to CollaboratorInfo
+            final collaboratorInfos = collaborators
+                .map((c) => CollaboratorInfo(
+                  userId: c.idPengguna,
+                  userName: c.namaLengkap,
+                  profilePicture: c.profilePicture,
+                  role: c.role,
+                ))
+                .toList();
+
+            // Show rating dialog
+            _showRatingDialog(collaboratorInfos, int.parse(id));
+          }
+        } catch (e) {
+          if (!mounted) return;
+          AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        AuthUiHelper.showSuccess(context, 'Perubahan berhasil disimpan.');
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -180,12 +236,39 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     }
   }
 
+  void _showRatingDialog(
+    List<CollaboratorInfo> collaborators,
+    int projectId,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BlocProvider<RatingBloc>(
+        create: (context) => RatingBloc(
+          ratingRepository: RatingRepositoryImpl(),
+        ),
+        child: RatingCollaboratorsDialog(
+          projectId: projectId,
+          collaborators: collaborators,
+          onComplete: () {
+            AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ),
+    );
+  }
+
   String _mapToBackendStatus(String label) {
     switch (label) {
       case 'Sedang Berjalan':
         return 'OPEN';
       case 'Selesai':
+        // 'Selesai' corresponds to backend 'DONE'
         return 'DONE';
+      case 'Project Berakhir':
+        // 'Project Berakhir' is the state when project is completed by owner
+        return 'COMPLETED';
       case 'Ditunda':
         return 'HOLD';
       case 'Belum Dimulai':
@@ -201,12 +284,16 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         return Colors.green;
       case 'Selesai':
         return Colors.blue;
+      case 'Project Berakhir':
+        return Colors.purple;
       case 'Ditunda':
         return Colors.orange;
       default:
         return Colors.grey;
     }
   }
+
+  bool get _isStatusLocked => _selectedStatus == 'Project Berakhir';
 
   @override
   Widget build(BuildContext context) {
@@ -655,6 +742,42 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   }
 
   Widget _buildStatusDropdown() {
+    if (_isStatusLocked) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _statusColor(_selectedStatus),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedStatus,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: ColorValue.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(Icons.lock_rounded, size: 18, color: Colors.grey),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(

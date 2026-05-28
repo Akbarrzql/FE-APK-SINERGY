@@ -446,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         extraMembers: extraMembers,
                         projectTitle: item.title,
                         projectType: item.category.isNotEmpty ? item.category.first : 'General',
-                        projectDate: '${item!.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
+                        projectDate: item.deadline != null ? '${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}' : '-',
                         deadline: item.deadline,
                         projectDescription: item.description,
                         skills: item.category.isNotEmpty ? item.category : const ['General'],

@@ -13,6 +13,7 @@ as review_model;
 import 'package:gabungyuk/feature/rating/presentation/all_reviews_screen.dart';
 import 'package:gabungyuk/feature/rating/presentation/user_review_section.dart';
 import 'package:gabungyuk/feature/rating/repository/rating_repository.dart';
+import 'package:gabungyuk/feature/portofolio/presentation/widget/user_detail_portofolio_section.dart';
 
 // ── Data bundle ───────────────────────────────────────────────────────────────
 class _UserRatingBundle {
@@ -314,6 +315,11 @@ class _UserDetailViewScreenState extends State<UserDetailViewScreen> {
                         );
                       },
                     ),
+
+                    const SizedBox(height: 32),
+
+                    // ── Portofolio Section ─────────────────────────────
+                    UserDetailPortofolioSection(userId: widget.userId),
 
                     const SizedBox(height: 32),
                   ],

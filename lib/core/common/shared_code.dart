@@ -24,16 +24,54 @@ class SharedCode {
   }
 
   String? emailValidator(value) {
+    final v = value?.toString().trim() ?? '';
+    if (v.isEmpty) return 'Email tidak boleh kosong';
+    
+    // Standard RFC 5322 regex for email
     bool emailValid = RegExp(
-        r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-        .hasMatch(value);
-    return !emailValid ? 'Email tidak valid' : null;
+        r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+        .hasMatch(v);
+        
+    return !emailValid ? 'Format email tidak valid' : null;
   }
 
   String? passwordValidator(value) {
-    return value.toString().length < 6
-        ? 'Kata sandi tidak boleh kurang dari 6 karakter'
-        : null;
+    final v = value?.toString() ?? '';
+    if (v.isEmpty) return 'Kata sandi tidak boleh kosong';
+    if (v.length < 8) {
+      return 'Kata sandi minimal 8 karakter';
+    }
+    
+    // Must contain at least one letter and one number
+    bool hasLetter = v.contains(RegExp(r'[a-zA-Z]'));
+    bool hasNumber = v.contains(RegExp(r'[0-9]'));
+    
+    if (!hasLetter || !hasNumber) {
+      return 'Kata sandi harus kombinasi huruf dan angka';
+    }
+    
+    return null;
+  }
+
+  String? confirmPasswordValidator(value, password) {
+    final v = value?.toString() ?? '';
+    if (v.isEmpty) return 'Konfirmasi kata sandi tidak boleh kosong';
+    if (v != password) {
+      return 'Kata sandi tidak cocok';
+    }
+    return null;
+  }
+
+  String? urlValidator(value) {
+    final v = value?.toString().trim() ?? '';
+    if (v.isEmpty) return null;
+    
+    // Simple but effective URL regex
+    bool urlValid = RegExp(
+        r"^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$")
+        .hasMatch(v);
+        
+    return !urlValid ? 'Format link tidak valid (gunakan http/https)' : null;
   }
 
   // Validator untuk form kolaborasi (create / edit)
@@ -61,7 +99,43 @@ class SharedCode {
 
   String? categoryValidator(value) {
     final v = value?.toString() ?? '';
-    return v.trim().isEmpty ? 'Kategori tidak boleh kosong' : null;
+    if (v.trim().isEmpty) {
+      return 'Kategori tidak boleh kosong';
+    }
+    if (!isITSector(v)) {
+      return 'Kategori harus dalam lingkup IT';
+    }
+    return null;
+  }
+
+  static const List<String> itScopeCategories = [
+    'Web Development',
+    'Mobile Development',
+    'UI/UX Design',
+    'Data Science',
+    'Artificial Intelligence',
+    'Cyber Security',
+    'Cloud Computing',
+    'Game Development',
+    'DevOps',
+    'Backend Development',
+    'Frontend Development',
+    'Fullstack Development',
+    'Mobile Dev',
+    'Back End',
+    'Data Analyst',
+    'Internet of Things (IoT)',
+    'Quality Assurance',
+    'Database Administrator',
+    'Network Engineer',
+  ];
+
+  static bool isITSector(String value) {
+    final lowerValue = value.toLowerCase();
+    return itScopeCategories.any((cat) => 
+      cat.toLowerCase() == lowerValue || 
+      lowerValue.contains(cat.toLowerCase())
+    );
   }
 
   Future<bool> setToken(String token, String value) async {

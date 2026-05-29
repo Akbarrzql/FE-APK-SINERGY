@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../../core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
@@ -631,14 +632,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   }
 
   Widget _buildCategoryInput() {
-    final categories = [
-      'Web Development',
-      'UI/UX Design',
-      'Mobile Dev',
-      'Back End',
-      'Data Science',
-      'Data Analyst',
-    ];
+    final categories = SharedCode.itScopeCategories.take(6).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,6 +729,13 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
       _categoryController.clear();
       return;
     }
+
+    if (!SharedCode.isITSector(clean)) {
+      AuthUiHelper.showError(context, 'Kategori harus dalam lingkup IT');
+      _categoryController.clear();
+      return;
+    }
+
     if (!_selectedCategories.contains(clean)) {
       setState(() => _selectedCategories.add(clean));
     }

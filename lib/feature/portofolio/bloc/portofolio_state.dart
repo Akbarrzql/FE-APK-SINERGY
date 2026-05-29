@@ -7,13 +7,18 @@ class PortofolioInitial extends PortofolioState {}
 class PortofolioLoading extends PortofolioState {}
 
 class PortofolioLoaded extends PortofolioState {
-  final List<PortofolioModel> allPortofolio;
-  final List<PortofolioModel> filteredPortofolio;
+  final List<Data> allPortofolio;
+  final List<Data> filteredPortofolio;
 
   PortofolioLoaded({
     required this.allPortofolio,
     required this.filteredPortofolio,
   });
+}
+
+class PortofolioActionSuccess extends PortofolioState {
+  final String message;
+  PortofolioActionSuccess(this.message);
 }
 
 class PortofolioError extends PortofolioState {

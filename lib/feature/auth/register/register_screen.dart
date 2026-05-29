@@ -30,10 +30,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   final SharedCode _sharedCode = SharedCode();
   late final RegisterPageBloc _registerPageBloc;
 
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   bool _isLoading(RegisterPageState state) => state is RegisterPageLoading;
 
@@ -50,6 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _nameController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _registerPageBloc.close();
     super.dispose();
   }
@@ -65,10 +68,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (state is RegisterPageLoaded) {
               FocusManager.instance.primaryFocus?.unfocus();
 
+              AuthUiHelper.showSuccess(context, 'Registrasi berhasil! Silakan masuk.');
+              
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const BottomNavigation(),
+                  builder: (context) => const LoginScreen(),
                 ),
               );
             } else if (state is RegisterPageError) {
@@ -151,6 +156,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                       icon: Icon(
                         _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: _subtitleColor,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _AuthTextField(
+                    controller: _confirmPasswordController,
+                    hintText: 'Konfirmasi password',
+                    obscureText: _obscureConfirmPassword,
+                    validator: (value) => _sharedCode.confirmPasswordValidator(
+                        value, _passwordController.text),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                      icon: Icon(
+                        _obscureConfirmPassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
                         color: _subtitleColor,

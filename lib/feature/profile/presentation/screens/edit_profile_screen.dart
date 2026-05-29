@@ -14,6 +14,7 @@ import 'package:gabungyuk/feature/profile/bloc/profile_bloc.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/feature/profile/bloc/profile_state.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
@@ -581,6 +582,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _addKeahlian(String val) {
     final clean = val.trim();
     if (clean.isNotEmpty) {
+      if (!SharedCode.isITSector(clean)) {
+        AuthUiHelper.showError(context, 'Keahlian harus dalam lingkup IT');
+        _keahlianController.clear();
+        return;
+      }
       if (!_keahlianList.contains(clean)) {
         setState(() {
           _keahlianList.add(clean);
@@ -595,14 +601,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // Helper untuk TextField agar bentuknya rapi dan konsisten
   Widget _buildTextField(TextEditingController controller, String label,
       {bool isBio = false, bool enabled = true}) {
+    final sharedCode = SharedCode();
     return TextFormField(
       controller: controller,
       maxLines: isBio ? 4 : 1,
       enabled: enabled,
       style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade700),
       validator: (v) {
-        if (label == 'Nama Lengkap' && (v == null || v.trim().isEmpty)) {
-          return 'Masukkan $label';
+        if (label == 'Nama Lengkap') {
+          return sharedCode.nameValidator(v);
+        }
+        if (['WhatsApp', 'Instagram', 'Facebook', 'LinkedIn'].contains(label) &&
+            v != null &&
+            v.isNotEmpty) {
+          return sharedCode.urlValidator(v);
         }
         return null;
       },

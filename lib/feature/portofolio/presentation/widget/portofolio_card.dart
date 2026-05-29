@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/portofolio_model.dart';
 
 class PortofolioCard extends StatelessWidget {
-  final PortofolioModel portofolio;
+  final Data portofolio;
 
   const PortofolioCard({super.key, required this.portofolio});
 
@@ -14,7 +14,7 @@ class PortofolioCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -29,11 +29,16 @@ class PortofolioCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFE2E8F0),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                image: DecorationImage(
-                  image: NetworkImage(portofolio.image),
-                  fit: BoxFit.cover,
-                ),
+                image: portofolio.image != null && portofolio.image!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(portofolio.image!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
+              child: portofolio.image == null || portofolio.image!.isEmpty
+                  ? const Center(child: Icon(Icons.image, color: Colors.grey))
+                  : null,
             ),
           ),
           // Render Teks Konten Proyek
@@ -43,14 +48,14 @@ class PortofolioCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  portofolio.title,
+                  portofolio.title ?? '-',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  portofolio.description,
+                  portofolio.description ?? '-',
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.grey[600], fontSize: 11, height: 1.4),

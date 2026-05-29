@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
+import 'package:gabungyuk/core/common/shared_code.dart';
 import '../../../../core/common/color_value.dart';
 
 class CreateCollaborationPage extends StatefulWidget {
@@ -21,6 +22,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   final _repoController = TextEditingController();
   final _urlController = TextEditingController();
   final List<String> _selectedCategories = [];
+  final SharedCode _sharedCode = SharedCode();
 
   String _selectedStatus = 'Belum Dimulai';
   String? _imagePath; // ganti dengan File jika pakai image_picker
@@ -205,8 +207,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       _buildTextField(
                         controller: _titleController,
                         hint: 'Masukkan Judul',
-                        validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Judul wajib diisi' : null,
+                        validator: _sharedCode.titleValidator,
                         isBorderless: true,
                       ),
 
@@ -221,9 +222,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                         controller: _descController,
                         hint: 'Tambahkan Deksripsi',
                         maxLines: 4,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Deskripsi wajib diisi'
-                            : null,
+                        validator: _sharedCode.descriptionValidator,
                       ),
 
                       const SizedBox(height: 16),
@@ -237,8 +236,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                          hint: 'https://github.com/...',
                          keyboardType: TextInputType.url,
                          prefixIcon: Icons.code_rounded,
-                         validator: (v) =>
-                         (v == null || v.isEmpty) ? 'Link repository wajib diisi' : null,
+                         validator: _sharedCode.urlValidator,
                        ),
 
                        const SizedBox(height: 16),
@@ -382,14 +380,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   }
 
   Widget _buildCategoryInput() {
-    final List<String> categories = [
-      'Web Development',
-      'UI/UX Design',
-      'Mobile Dev',
-      'Back End',
-      'Data Science',
-      'Data Analyst',
-    ];
+    final List<String> categories = SharedCode.itScopeCategories.take(6).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,6 +480,13 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
       _categoryController.clear();
       return;
     }
+    
+    if (!SharedCode.isITSector(clean)) {
+      AuthUiHelper.showError(context, 'Kategori harus dalam lingkup IT');
+      _categoryController.clear();
+      return;
+    }
+
     if (!_selectedCategories.contains(clean)) {
       setState(() => _selectedCategories.add(clean));
     }

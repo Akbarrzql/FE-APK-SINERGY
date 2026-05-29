@@ -1,30 +1,43 @@
-import '../data/models/portofolio_model.dart';
-
 abstract class PortofolioEvent {}
 
-// Event untuk mengambil data awal dari repository
 class GetPortofolioData extends PortofolioEvent {}
 
-// Event untuk pencarian/filtering portofolio
 class FilterPortofolioSearch extends PortofolioEvent {
   final String query;
   FilterPortofolioSearch(this.query);
 }
 
-// 👈 Event untuk menambah data baru secara lokal
-class AddPortofolioManual extends PortofolioEvent {
-  final PortofolioModel portofolio;
-  AddPortofolioManual(this.portofolio);
+class CreatePortofolioEvent extends PortofolioEvent {
+  final String title;
+  final String description;
+  final String fileUrl;
+  final String? imagePath;
+
+  CreatePortofolioEvent({
+    required this.title,
+    required this.description,
+    required this.fileUrl,
+    this.imagePath,
+  });
 }
 
-// 👈 Event untuk mengedit data berdasarkan ID
-class EditPortofolioManual extends PortofolioEvent {
-  final PortofolioModel portofolio;
-  EditPortofolioManual(this.portofolio);
+class UpdatePortofolioEvent extends PortofolioEvent {
+  final int portfolioId;
+  final String title;
+  final String description;
+  final String fileUrl;
+  final String? imagePath;
+
+  UpdatePortofolioEvent({
+    required this.portfolioId,
+    required this.title,
+    required this.description,
+    required this.fileUrl,
+    this.imagePath,
+  });
 }
 
-// 👈 Event untuk menghapus data berdasarkan ID
-class DeletePortofolioManual extends PortofolioEvent {
-  final dynamic id;
-  DeletePortofolioManual(this.id);
+class DeletePortofolioEvent extends PortofolioEvent {
+  final int id;
+  DeletePortofolioEvent(this.id);
 }

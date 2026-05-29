@@ -3,10 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/feature/portofolio/bloc/portofolio_bloc.dart';
 import 'package:gabungyuk/feature/portofolio/bloc/portofolio_event.dart';
 import 'package:gabungyuk/feature/portofolio/bloc/portofolio_state.dart';
-import 'package:gabungyuk/feature/portofolio/data/repositories/portofolio_repository.dart';
+import '../../repositories/portofolio_repository.dart';
 import '../widget/portofolio_card.dart';
 import 'package:gabungyuk/feature/portofolio/presentation/screen/portofolio_add_screen.dart';
-import 'package:gabungyuk/feature/portofolio/presentation/screen/portofolio_edit_screen.dart';
+import 'package:gabungyuk/feature/portofolio/presentation/screen/portofolio_detail_screen.dart';
 
 class PortofolioScreen extends StatelessWidget {
   const PortofolioScreen({super.key});
@@ -18,7 +18,7 @@ class PortofolioScreen extends StatelessWidget {
         repository: PortofolioRepositoryImpl(),
       )..add(GetPortofolioData()),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -34,37 +34,36 @@ class PortofolioScreen extends StatelessWidget {
           centerTitle: false,
         ),
         body: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             children: [
-              // 1. Search Bar Input
+              const SizedBox(height: 8),
               Builder(
-                  builder: (context) {
-                    return TextField(
-                      onChanged: (query) {
-                        context.read<PortofolioBloc>().add(FilterPortofolioSearch(query));
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Cari Kolaborasi',
-                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
-                        ),
+                builder: (context) {
+                  return TextField(
+                    onChanged: (query) {
+                      context.read<PortofolioBloc>().add(FilterPortofolioSearch(query));
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Cari Portofolio',
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
                       ),
-                    );
-                  }
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                      ),
+                    ),
+                  );
+                }
               ),
-              const SizedBox(height: 20),
-
-              // 2. Area Grid List yang Dikontrol BLoC Builder
+              const SizedBox(height: 24),
               Expanded(
                 child: BlocBuilder<PortofolioBloc, PortofolioState>(
                   builder: (context, state) {
@@ -80,21 +79,23 @@ class PortofolioScreen extends StatelessWidget {
                       return GridView.builder(
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.7,
                         ),
                         itemCount: state.filteredPortofolio.length,
                         itemBuilder: (context, index) {
                           final item = state.filteredPortofolio[index];
 
-                          // Membungkus card dengan GestureDetector agar beneran bisa diklik ke detail
                           return GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => PortofolioEditScreen(portofolio: item),
+                                  builder: (innerContext) => BlocProvider.value(
+                                    value: context.read<PortofolioBloc>(),
+                                    child: PortofolioDetailScreen(portofolio: item),
+                                  ),
                                 ),
                               );
                             },
@@ -128,19 +129,25 @@ class PortofolioScreen extends StatelessWidget {
             ],
           ),
         ),
-        // 3. Tombol Floating Action Button (+) Diarahkan ke Halaman TAMBAH BARU
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const PortofolioAddScreen(),
-              ),
+        floatingActionButton: Builder(
+          builder: (context) {
+            return FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (innerContext) => BlocProvider.value(
+                      value: context.read<PortofolioBloc>(),
+                      child: const PortofolioAddScreen(),
+                    ),
+                  ),
+                );
+              },
+              backgroundColor: const Color(0xFF4285F4),
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, color: Colors.white),
             );
-          },
-          backgroundColor: Colors.blue,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-          child: const Icon(Icons.add, color: Colors.white),
+          }
         ),
       ),
     );

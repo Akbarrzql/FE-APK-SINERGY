@@ -82,9 +82,13 @@ class CollaborationService {
     required List<String> category,
     required String status,
     required String repositoryLink,
+    String? oldStatus,
     String? imagePath,
     DateTime? deadline,
   }) async {
+    print('************************************************************');
+    print('[KALENDER_FLOW] UPDATE DIMULAI - ID: $id, STATUS: $status');
+    
     final token = await _sharedCode.getAuthToken();
     final apiUrl = Uri.parse('${ApiConfig.baseUrl}/api/v1/projects/$id');
 
@@ -114,13 +118,60 @@ class CollaborationService {
     final response = await http.Response.fromStream(streamed);
     _logResponse(response);
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      print('[KALENDER_FLOW] Update Proyek Utama BERHASIL.');
+      
+      final isDone = (status.toUpperCase() == 'COMPLETED' || status.toUpperCase() == 'DONE');
+      print('[KALENDER_FLOW] Apakah Status Selesai? $isDone');
+
+      if (isDone) {
+        print('[KALENDER_FLOW] Memicu _markCalendarEventAsDone untuk ID: $id');
+        await _markCalendarEventAsDone(int.tryParse(id) ?? 0);
+      }
+    } else {
+      print('[KALENDER_FLOW] Update Proyek Utama GAGAL. Status: ${response.statusCode}');
       String message = 'Terjadi kesalahan saat memperbarui proyek.';
       try {
         final Map<String, dynamic> json = jsonDecode(response.body);
         message = json['message'] ?? json['msg'] ?? message;
       } catch (_) {}
       throw ApiException(message, response.statusCode);
+    }
+    print('************************************************************');
+  }
+
+  Future<void> _markCalendarEventAsDone(int projectId) async {
+    if (projectId == 0) {
+      print('[KALENDER_FLOW] ERROR: ID Proyek 0, tidak bisa memanggil kalender.');
+      return;
+    }
+    
+    try {
+      final token = await _sharedCode.getAuthToken();
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/calendar/done');
+      
+      print('[KALENDER_FLOW] PATCH Kalender -> $url');
+      print('[KALENDER_FLOW] Body -> {"projectId": $projectId}');
+      
+      final response = await http.patch(
+        url,
+        headers: {
+          HttpHeaders.authorizationHeader: 'Bearer $token',
+          HttpHeaders.contentTypeHeader: 'application/json',
+        },
+        body: jsonEncode({'projectId': projectId}),
+      );
+      
+      print('[KALENDER_FLOW] Respon Kalender Status: ${response.statusCode}');
+      print('[KALENDER_FLOW] Respon Kalender Body: ${response.body}');
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        print('[KALENDER_FLOW] BERHASIL: Event kalender ditandai selesai.');
+      } else {
+        print('[KALENDER_FLOW] GAGAL: Endpoint kalender merespon dengan error.');
+      }
+    } catch (e) {
+      print('[KALENDER_FLOW] EXCEPTION saat kalender: $e');
     }
   }
 

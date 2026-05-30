@@ -321,6 +321,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     final project = _detailModel?.data.project;
     final allCollaborators = _detailModel?.data.collaborators ?? [];
     final isProjectOwner = widget.owner?.idPengguna == widget.project.owner.id;
+    final userJoinStatus = (_collaborationModel?.data?.status ?? _detailModel?.data.status)?.toUpperCase();
     final ratingByUserId = <int, double>{};
 
     for (final userId in _projectRatings.map((e) => e.ratedUserId).whereType<int>().toSet()) {
@@ -728,7 +729,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
 
             // ── Join Button ────────────────────────────────────────────────
             if (widget.owner?.idPengguna != widget.project.owner.id &&
-                _collaborationModel?.data?.status?.toUpperCase() != 'ACCEPTED' &&
+                userJoinStatus != 'ACCEPTED' &&
                 _projectStatus != 'Project Berakhir')
               SliverToBoxAdapter(
                 child: Padding(
@@ -737,8 +738,10 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: (_collaborationModel?.data?.status?.toUpperCase() == 'ACCEPTED' || 
-                                  _collaborationModel?.data?.status?.toUpperCase() == 'PENDING') 
+                      onPressed: (userJoinStatus == 'ACCEPTED' || 
+                                  userJoinStatus == 'PENDING' ||
+                                  userJoinStatus == 'WAITING' ||
+                                  userJoinStatus == 'REQUESTED')
                           ? null 
                           : () async {
                               try {
@@ -765,7 +768,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         elevation: 0,
                       ),
                       child: Text(
-                        _getJoinButtonText(_collaborationModel?.data?.status),
+                        _getJoinButtonText(userJoinStatus),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -832,8 +835,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     id: widget.project.id.toString(),
                     title: project?.title ?? widget.project.title,
                     description: project?.description ?? widget.project.description,
-                      category: List<String>.from(project?.category ?? widget.project.category),
+                    category: List<String>.from(project?.category ?? widget.project.category),
                     status: newBackendStatus,
+                    oldStatus: oldBackendStatus,
                     repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
                   );
 
@@ -841,7 +845,8 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     AuthUiHelper.showSuccess(context, 'Status diperbarui ke $s');
                   }
 
-                  if (newBackendStatus == 'COMPLETED' && oldBackendStatus != 'COMPLETED') {
+                  if ((newBackendStatus == 'COMPLETED' || newBackendStatus == 'DONE') &&
+                      (oldBackendStatus != 'COMPLETED' && oldBackendStatus != 'DONE')) {
                     await _showCompletionRatingFlow();
                   }
                 } catch (e) {
@@ -945,7 +950,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     if (status == null) return 'Bergabung';
     final s = status.toUpperCase();
     if (s == 'ACCEPTED') return 'Sudah Bergabung';
-    if (s == 'PENDING') return 'Menunggu Persetujuan';
+    if (s == 'PENDING' || s == 'WAITING' || s == 'REQUESTED') return 'Menunggu Persetujuan';
     return 'Bergabung';
   }
 

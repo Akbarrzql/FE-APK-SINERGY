@@ -109,7 +109,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.notifications_outlined,
+              Icons.low_priority_outlined,
               color: ColorValue.primaryColor,
               size: 20,
             ),

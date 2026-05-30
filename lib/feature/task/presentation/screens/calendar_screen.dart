@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gabungyuk/feature/task/data/models/calendar_event_model.dart';
+import 'package:gabungyuk/feature/task/data/repositories/calendar_repository.dart';
+import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
+import 'package:gabungyuk/feature/home/presentation/detail_collaboration.dart';
+import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
+import 'package:gabungyuk/feature/home/model/view_project_model.dart';
+import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -9,41 +17,28 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
+  final CalendarRepository _repository = CalendarRepositoryImpl();
+  final CollaborationService _collaborationService = CollaborationService();
+  final ProfileRepository _profileRepository = ProfileRepositoryImpl();
   DateTime focusedDate = DateTime.now();
-  int? selectedDay; // ← nullable, default tidak ada yang dipilih
+  int? selectedDay;
+  
+  late Future<CalendarEventModel> _calendarFuture;
 
-  final List<Map<String, dynamic>> allEvents = [
-    {
-      "date": DateTime(2026, 5, 12),
-      "title": "Analisis Data Keuangan",
-      "time": "09.00 WIB",
-      "color": const Color(0xFF1E6AF9),
-    },
-    {
-      "date": DateTime(2026, 5, 22),
-      "title": "Deadline Task #30",
-      "time": "23.00 WIB",
-      "color": const Color(0xFF1E6AF9),
-    },
-    {
-      "date": DateTime(2026, 5, 24),
-      "title": "Pengecekan Fitur Chat",
-      "time": "12.00 WIB",
-      "color": Colors.orange,
-    },
-    {
-      "date": DateTime(2026, 6, 10),
-      "title": "Review UI/UX MountOne",
-      "time": "14.00 WIB",
-      "color": Colors.green,
-    },
-    {
-      "date": DateTime(2026, 6, 11),
-      "title": "Assigmen Impal",
-      "time": "23.49 WIB",
-      "color": const Color.fromARGB(255, 70, 1, 3),
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  void _loadEvents() {
+    setState(() {
+      _calendarFuture = _repository.fetchCalendarEvents(
+        focusedDate.year,
+        focusedDate.month,
+      );
+    });
+  }
 
   final List<String> months = [
     'Januari',
@@ -60,39 +55,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     'Desember',
   ];
 
-  // Cek apakah tanggal ini punya event
-  bool _hasEvent(int day) {
-    return allEvents.any(
-      (e) =>
-          e['date'].day == day &&
-          e['date'].month == focusedDate.month &&
-          e['date'].year == focusedDate.year,
-    );
+  bool _hasEvent(int day, List<CalendarEvent> events) {
+    return events.any((e) => e.deadline.day == day);
   }
 
-  // Ambil event berdasarkan tanggal yang dipilih
-  List<Map<String, dynamic>> _getEventsByDay(int day) {
-    return allEvents
-        .where(
-          (e) =>
-              e['date'].day == day &&
-              e['date'].month == focusedDate.month &&
-              e['date'].year == focusedDate.year,
-        )
-        .toList();
-  }
-
-  // Ambil semua event di bulan yang sedang ditampilkan
-  List<Map<String, dynamic>> _getMonthlyEvents() {
-    final events = allEvents
-        .where(
-          (e) =>
-              e['date'].month == focusedDate.month &&
-              e['date'].year == focusedDate.year,
-        )
-        .toList();
-    events.sort((a, b) => a['date'].compareTo(b['date']));
-    return events;
+  List<CalendarEvent> _getEventsByDay(int day, List<CalendarEvent> events) {
+    return events.where((e) => e.deadline.day == day).toList();
   }
 
   void _showMonthYearPicker() {
@@ -152,8 +120,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   ),
                                 ),
                                 onTap: () => setModalState(
-                                  () =>
-                                      tempDate = DateTime(year, tempDate.month),
+                                  () => tempDate = DateTime(year, tempDate.month),
                                 ),
                               );
                             },
@@ -180,10 +147,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   ),
                                 ),
                                 onTap: () => setModalState(
-                                  () => tempDate = DateTime(
-                                    tempDate.year,
-                                    index + 1,
-                                  ),
+                                  () => tempDate = DateTime(tempDate.year, index + 1),
                                 ),
                               );
                             },
@@ -207,9 +171,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         onPressed: () {
                           setState(() {
                             focusedDate = tempDate;
-                            selectedDay =
-                                null; // reset pilihan saat ganti bulan
+                            selectedDay = null;
                           });
+                          _loadEvents();
                           Navigator.pop(context);
                         },
                         child: Text(
@@ -231,10 +195,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // Bottom sheet View All — tampil semua event bulan ini
-  void _showViewAll() {
-    final monthlyEvents = _getMonthlyEvents();
-
+  void _showViewAll(List<CalendarEvent> monthlyEvents) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -261,10 +222,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -296,14 +254,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         itemCount: monthlyEvents.length,
                         itemBuilder: (context, index) {
                           final event = monthlyEvents[index];
-                          DateTime date = event['date'];
-                          String dateText =
-                              "${date.day} ${months[date.month - 1]} ${date.year}";
-                          return _eventTile(
-                            dateText,
-                            event['title'],
-                            event['time'],
-                            event['color'],
+                          String dateText = "${event.deadline.day} ${months[event.deadline.month - 1]} ${event.deadline.year}";
+                          return GestureDetector(
+                            onTap: () => _navigateToProjectDetail(event.projectId),
+                            child: _eventTile(
+                              dateText,
+                              event.title,
+                              event.time,
+                              event.color,
+                              event.isDone,
+                            ),
                           );
                         },
                       ),
@@ -315,46 +275,123 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  Future<void> _navigateToProjectDetail(int projectId) async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // Fetch project detail
+      final detailModel =
+          await _collaborationService.getProjectDetail(projectId);
+      final profile = await _profileRepository.getViewProfile();
+
+      if (mounted) {
+        Navigator.pop(context); // Pop loading
+
+        final project = detailModel.data.project;
+        
+        // Map Project to Datum for DetailCollaboration
+        final datum = Datum(
+          id: project.projectId,
+          title: project.title,
+          description: project.description,
+          category: project.category,
+          status: project.status,
+          repositoryLink: project.repositoryLink,
+          projectPicture: project.projectPicture,
+          deadline: project.deadline,
+          owner: Owner(
+            id: profile.idPengguna,
+            fullName: profile.namaLengkap,
+            email: profile.email,
+            profilePicture: profile.profilePicture,
+          ),
+          collaborators: [],
+        );
+
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailCollaboration(
+              project: datum,
+              owner: profile,
+            ),
+          ),
+        );
+        _loadEvents();
+      }
+    } catch (e) {
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context); // Pop loading
+        AuthUiHelper.showError(context, "Gagal memuat detail proyek: $e");
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1E6AF9), Color(0xFF1652C9)],
-              ),
-              borderRadius: BorderRadius.circular(35),
-            ),
+    return FutureBuilder<CalendarEventModel>(
+      future: _calendarFuture,
+      builder: (context, snapshot) {
+        final List<CalendarEvent> events = snapshot.data?.data ?? [];
+        final bool isLoading = snapshot.connectionState == ConnectionState.waiting;
+        final bool hasError = snapshot.hasError;
+
+        return RefreshIndicator(
+          onRefresh: () async => _loadEvents(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildCalendarHeader(),
-                const SizedBox(height: 5),
-                Text(
-                  'Check your monthly schedule',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white70,
-                    fontSize: 12,
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1E6AF9), Color(0xFF1652C9)],
+                    ),
+                    borderRadius: BorderRadius.circular(35),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCalendarHeader(),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Check your monthly schedule',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      _buildWeekDays(),
+                      const SizedBox(height: 15),
+                      isLoading
+                          ? const Center(child: Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: CircularProgressIndicator(color: Colors.white),
+                          ))
+                          : hasError
+                              ? Center(child: Text("Gagal memuat data", style: GoogleFonts.poppins(color: Colors.white)))
+                              : _buildCalendarGrid(events),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 30),
-                _buildWeekDays(),
-                const SizedBox(height: 15),
-                _buildCalendarGrid(),
+                _buildEventSection(events, isLoading),
               ],
             ),
           ),
-          const SizedBox(height: 30),
-          _buildEventSection(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -382,18 +419,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
           children: [
             _circleNav(
               Icons.chevron_left,
-              () => setState(() {
-                focusedDate = DateTime(focusedDate.year, focusedDate.month - 1);
-                selectedDay = null; // reset saat ganti bulan
-              }),
+              () {
+                setState(() {
+                  focusedDate = DateTime(focusedDate.year, focusedDate.month - 1);
+                  selectedDay = null;
+                });
+                _loadEvents();
+              },
             ),
             const SizedBox(width: 10),
             _circleNav(
               Icons.chevron_right,
-              () => setState(() {
-                focusedDate = DateTime(focusedDate.year, focusedDate.month + 1);
-                selectedDay = null; // reset saat ganti bulan
-              }),
+              () {
+                setState(() {
+                  focusedDate = DateTime(focusedDate.year, focusedDate.month + 1);
+                  selectedDay = null;
+                });
+                _loadEvents();
+              },
             ),
           ],
         ),
@@ -406,7 +449,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     child: Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
       child: Icon(icon, color: Colors.white, size: 20),
@@ -417,23 +460,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: days
-          .map(
-            (day) => Text(
-              day,
-              style: GoogleFonts.poppins(
-                color: Colors.white60,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          )
-          .toList(),
+      children: days.map((day) => Text(
+        day,
+        style: GoogleFonts.poppins(
+          color: Colors.white60,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+      )).toList(),
     );
   }
 
-  Widget _buildCalendarGrid() {
+  Widget _buildCalendarGrid(List<CalendarEvent> events) {
     int daysInMonth = DateTime(focusedDate.year, focusedDate.month + 1, 0).day;
+    int firstDayWeekday = DateTime(focusedDate.year, focusedDate.month, 1).weekday;
+    
+    // Sesuaikan offset jika minggu dimulai dari Senin (1)
+    int offset = firstDayWeekday - 1;
+
+    final now = DateTime.now();
 
     return GridView.builder(
       shrinkWrap: true,
@@ -442,15 +487,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
         crossAxisCount: 7,
         mainAxisSpacing: 10,
       ),
-      itemCount: daysInMonth,
+      itemCount: daysInMonth + offset,
       itemBuilder: (context, index) {
-        int day = index + 1;
+        if (index < offset) return const SizedBox.shrink();
+        
+        int day = index - offset + 1;
         bool isSelected = day == selectedDay;
-        bool hasEvent = _hasEvent(day);
+        List<CalendarEvent> dayEvents = _getEventsByDay(day, events);
+        bool hasEvent = dayEvents.isNotEmpty;
+        bool allDone = hasEvent && dayEvents.every((e) => e.isDone);
+        bool isToday = day == now.day && 
+            focusedDate.month == now.month && 
+            focusedDate.year == now.year;
 
         return GestureDetector(
           onTap: () {
-            // Semua tanggal bisa di-tap
             setState(() => selectedDay = day);
           },
           child: Column(
@@ -461,15 +512,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 decoration: BoxDecoration(
                   color: isSelected ? Colors.white : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
+                  border: isToday && !isSelected
+                      ? Border.all(color: Colors.white, width: 1.5)
+                      : null,
                 ),
                 child: Center(
                   child: Text(
                     '$day',
                     style: GoogleFonts.poppins(
                       color: isSelected ? Colors.black : Colors.white,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight: (isSelected || isToday) ? FontWeight.bold : FontWeight.normal,
                       fontSize: 13,
                     ),
                   ),
@@ -480,8 +532,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   margin: const EdgeInsets.only(top: 4),
                   width: 4,
                   height: 4,
-                  decoration: const BoxDecoration(
-                    color: Colors.orange,
+                  decoration: BoxDecoration(
+                    color: allDone ? Colors.green : Colors.orange,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -492,11 +544,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildEventSection() {
-    // Kalau ada tanggal dipilih → tampil event di tanggal itu
-    // Kalau tidak ada → tampil teks info
-    final List<Map<String, dynamic>> eventsToShow = selectedDay != null
-        ? _getEventsByDay(selectedDay!)
+  Widget _buildEventSection(List<CalendarEvent> allEvents, bool isLoading) {
+    final List<CalendarEvent> eventsToShow = selectedDay != null
+        ? _getEventsByDay(selectedDay!, allEvents)
         : [];
 
     return Column(
@@ -513,8 +563,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ),
             GestureDetector(
-              onTap:
-                  _showViewAll, // ← tap view all buka bottom sheet semua event
+              onTap: () => _showViewAll(allEvents),
               child: Text(
                 'View all',
                 style: GoogleFonts.poppins(
@@ -528,8 +577,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Kalau belum ada tanggal dipilih
-        if (selectedDay == null)
+        if (isLoading && allEvents.isEmpty)
+          const Center(child: CircularProgressIndicator())
+        else if (selectedDay == null)
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -540,16 +590,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   Text(
                     'Tap tanggal untuk melihat event',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey,
-                      fontSize: 13,
-                    ),
+                    style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
                   ),
                 ],
               ),
             ),
           )
-        // Tanggal dipilih tapi tidak ada event
         else if (eventsToShow.isEmpty)
           Center(
             child: Padding(
@@ -561,33 +607,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   Text(
                     'Tidak ada event di tanggal $selectedDay\n${months[focusedDate.month - 1]} ${focusedDate.year}',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey,
-                      fontSize: 13,
-                    ),
+                    style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
                   ),
                 ],
               ),
             ),
           )
-        // Tampil event di tanggal yang dipilih
         else
           ...eventsToShow.map((event) {
-            DateTime date = event['date'];
-            String dateText =
-                "${date.day} ${months[date.month - 1]} ${date.year}";
-            return _eventTile(
-              dateText,
-              event['title'],
-              event['time'],
-              event['color'],
+            String dateText = "${event.deadline.day} ${months[event.deadline.month - 1]} ${event.deadline.year}";
+            return GestureDetector(
+              onTap: () => _navigateToProjectDetail(event.projectId),
+              child: _eventTile(
+                dateText,
+                event.title,
+                event.time,
+                event.color,
+                event.isDone,
+              ),
             );
-          }).toList(),
+          }),
       ],
     );
   }
 
-  Widget _eventTile(String date, String title, String time, Color tagColor) {
+  Widget _eventTile(String date, String title, String time, Color tagColor, bool isDone) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -596,7 +640,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             width: 4,
             height: 50,
             decoration: BoxDecoration(
-              color: tagColor,
+              color: isDone ? Colors.green : tagColor,
               borderRadius: BorderRadius.circular(10),
             ),
           ),
@@ -609,12 +653,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   date,
                   style: GoogleFonts.poppins(color: Colors.grey, fontSize: 10),
                 ),
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 14,
+                          decoration: isDone ? TextDecoration.lineThrough : null,
+                          color: isDone ? Colors.grey : Colors.black,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isDone) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "Selesai",
+                          style: GoogleFonts.poppins(
+                            color: Colors.green,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Text(
                   time,

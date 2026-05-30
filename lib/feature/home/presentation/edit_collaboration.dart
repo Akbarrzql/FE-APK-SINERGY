@@ -168,7 +168,8 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         ? prevStatusRaw.toUpperCase()
         : _mapToBackendStatus(prevStatusRaw);
 
-    final isChangingToCompleted = backendStatus == 'COMPLETED' && prevBackendStatus != 'COMPLETED';
+    final isChangingToCompleted = (backendStatus == 'COMPLETED' || backendStatus == 'DONE') &&
+        (prevBackendStatus != 'COMPLETED' && prevBackendStatus != 'DONE');
 
     showDialog(
       context: context,
@@ -187,6 +188,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         description: _descController.text.trim(),
         category: _selectedCategories,
         status: backendStatus,
+        oldStatus: prevBackendStatus,
         repositoryLink: _repoController.text.trim(),
         imagePath: _newImagePath,
         deadline: _selectedDeadline,

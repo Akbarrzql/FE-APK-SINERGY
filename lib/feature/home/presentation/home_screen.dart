@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/category_chip.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/collaboration_card.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
+import 'package:gabungyuk/feature/notification/bloc/notification_bloc.dart';
+import 'package:gabungyuk/feature/notification/bloc/notification_event.dart';
+import 'package:gabungyuk/feature/notification/bloc/notification_state.dart';
+import 'package:gabungyuk/feature/notification/presentation/notification_screen.dart';
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
@@ -56,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchData() async {
+    context.read<NotificationBloc>().add(FetchUnreadCount());
     await Future.wait([
       _fetchProfile(),
       _fetchProjects(),
@@ -213,31 +219,63 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          // Bell button
-                          Stack(
-                            children: [
-                              SizedBox(
-                                width: 38,
-                                height: 38,
-                                child: const Icon(
-                                  Icons.notifications_outlined,
-                                  color: ColorValue.textPrimary,
-                                  size: 20,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const NotificationScreen(),
                                 ),
-                              ),
-                              Positioned(
-                                right: 6,
-                                top: 6,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ).then((_) {
+                                // Refresh unread count when returning from notification screen
+                                context.read<NotificationBloc>().add(FetchUnreadCount());
+                              });
+                            },
+                            child: BlocBuilder<NotificationBloc, NotificationState>(
+                              builder: (context, state) {
+                                final unreadCount = state.unreadData?.unreadCount ?? 0;
+                                
+                                return Stack(
+                                  children: [
+                                    SizedBox(
+                                      width: 38,
+                                      height: 38,
+                                      child: const Icon(
+                                        Icons.notifications_outlined,
+                                        color: ColorValue.textPrimary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    if (unreadCount > 0)
+                                      Positioned(
+                                        right: 4,
+                                        top: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white, width: 1.5),
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 14,
+                                            minHeight: 14,
+                                          ),
+                                          child: Text(
+                                            unreadCount > 9 ? '9+' : '$unreadCount',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),

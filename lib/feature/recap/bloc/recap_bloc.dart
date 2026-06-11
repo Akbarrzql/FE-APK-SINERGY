@@ -4,9 +4,10 @@ import 'recap_event.dart';
 import 'recap_state.dart';
 import '../../home/service/collaboration_service.dart';
 import '../../activity_log/activity/data/repositories/activity_log_repository.dart';
+import '../../activity_log/activity/data/models/activity_log_model.dart' as activity_log;
 import '../data/models/recap_model.dart';
-import '../../collaboration/model/collaboration_profile_model.dart';
-import '../../home/model/view_project_model.dart';
+import '../../collaboration/model/collaboration_profile_model.dart' as collab_model;
+import '../../home/model/view_project_model.dart' as project_model;
 
 class RecapBloc extends Bloc<RecapEvent, RecapState> {
   final RecapRepository repository;
@@ -17,53 +18,67 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     on<FetchRecapData>((event, emit) async {
       emit(RecapLoading());
       try {
-        // 1. Fetch Recap Data (Heatmap & Stats)
-        final recapData = await repository.getActivityRecap();
-        
-        // 2. Fetch Collaboration Data for accurate overview
-        final collabDashboard = await collaborationService.getCollaborationDashboard();
-        final ownedProjectsCount = collabDashboard.data?.ownedProjects?.length ?? 0;
-        
-        final allMyProjects = await collaborationService.getMyProjects();
-        final totalProjects = allMyProjects.length;
-        final collaborationsCount = totalProjects > ownedProjectsCount ? totalProjects - ownedProjectsCount : 0;
+        // 1. Fetch data dari berbagai source
+        final results = await Future.wait([
+          repository.getActivityRecap(),
+          collaborationService.getCollaborationDashboard(),
+          activityLogRepository.getActivityLogs(),
+        ]);
 
-        // 3. Fetch Activity Logs & Project Names
-        final activityLogs = await activityLogRepository.getActivityLogs();
-        
-        // Create a mapping of projectId to projectName for better activity display
-        final Map<int, String> projectNames = {
-          for (var p in allMyProjects) p.id: p.title
-        };
+        final recapData = results[0] as RecapModel;
+        final collabDashboard = results[1] as collab_model.CollaborationProfileModel;
+        final activityLogs = results[2] as activity_log.ActivityLogModel;
 
-        // Group logs by project to create ProjectStats
-        final Map<int, int> projectActivityCounts = {};
-        for (var log in activityLogs.data ?? []) {
-          if (log.projectId != null) {
-            projectActivityCounts[log.projectId!] = (projectActivityCounts[log.projectId!] ?? 0) + 1;
+        // 2. Tentukan Owned Projects & Collaborations (Mengikuti UI Kolaborasi Saya)
+        // Owned Projects = projects created by user
+        final ownedProjects = collabDashboard.data?.ownedProjects ?? [];
+        
+        // Collaborations = projects user has joined (Accepted only)
+        final requestCollabs = collabDashboard.data?.requestCollab ?? [];
+        
+        // Filter requestCollab: We only count those where the status indicates active collaboration
+        // status "ACCEPTED" or if the UI logic maps it to "Sedang Berjalan", "Selesai", etc.
+        final joinedProjects = requestCollabs.where((c) {
+          // If it's a Map (from dynamic list), check status
+          if (c is Map) {
+            final status = c['status']?.toString().toUpperCase();
+            return status == 'ACCEPTED';
           }
-        }
-
-        final List<ProjectStat> projectStats = projectActivityCounts.entries.map((e) {
-          return ProjectStat(
-            projectName: projectNames[e.key] ?? "Project #${e.key}",
-            contributionCount: e.value,
-            isOwned: collabDashboard.data?.ownedProjects?.any((p) => p.id == e.key) ?? false,
-          );
+          return false;
         }).toList();
 
-        // Sort project stats by contribution count descending
-        projectStats.sort((a, b) => b.contributionCount.compareTo(a.contributionCount));
+        final ownedCount = ownedProjects.length;
+        final collabCount = joinedProjects.length;
 
-        // 4. Process Heatmap: Generate full 365 days
+        // 3. Hitung Active Projects (Sedang Berjalan)
+        // Active means status is 'OPEN' (Backend) or 'Sedang Berjalan' (UI Mapping)
+        bool isProjectActive(String? status) {
+          if (status == null) return false;
+          final s = status.toUpperCase();
+          return s == 'OPEN' || s == 'SEDANG BERJALAN';
+        }
+
+        final activeOwned = ownedProjects.where((p) => isProjectActive(p.status)).length;
+        
+        final activeJoined = joinedProjects.where((c) {
+          if (c is Map) {
+            final projectStatus = c['project']?['status']?.toString().toUpperCase();
+            return isProjectActive(projectStatus);
+          }
+          return false;
+        }).length;
+
+        final activeProjectsCount = activeOwned + activeJoined;
+
+        // 4. Process Heatmap: Generate FULL 365+ days range
         final dailyDatasets = <DateTime, int>{};
         final now = DateTime.now();
-        // GitHub-style: end on the Saturday of the current week
-        final endDate = now.add(Duration(days: 6 - (now.weekday % 7)));
-        final startDate = endDate.subtract(const Duration(days: 363)); // 52 weeks exactly
+        final int daysToSaturday = (6 - (now.weekday % 7));
+        final DateTime gridEnd = DateTime(now.year, now.month, now.day).add(Duration(days: daysToSaturday));
+        final DateTime gridStart = gridEnd.subtract(const Duration(days: 370));
 
-        for (int i = 0; i < 364; i++) {
-          final date = startDate.add(Duration(days: i));
+        for (int i = 0; i <= 370; i++) {
+          final date = gridStart.add(Duration(days: i));
           dailyDatasets[DateTime(date.year, date.month, date.day)] = 0;
         }
 
@@ -79,41 +94,31 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
           }
         });
 
-        // 5. Update the recap model
-        final updatedRecap = recapData.copyWith(
-          ownedProjectsCount: ownedProjectsCount,
-          collaborationProjectsCount: collaborationsCount,
-          totalActivityCount: calculatedTotal,
+        // 5. Update Recap Model
+        final Map<String, int> dailyStringMap = dailyDatasets.map(
+          (key, value) => MapEntry(key.toIso8601String(), value),
         );
 
-        // Manually inject projectStats and totalContributions
         final finalRecap = RecapModel(
-          status: updatedRecap.status,
-          message: updatedRecap.message,
-          dailyContributions: updatedRecap.dailyContributions,
-          totalContributions: calculatedTotal > 0 ? calculatedTotal : recapData.totalContributions,
-          ownedProjectsCount: updatedRecap.ownedProjectsCount,
-          collaborationProjectsCount: updatedRecap.collaborationProjectsCount,
-          projectStats: projectStats,
-          totalActivityCount: calculatedTotal,
+          status: recapData.status,
+          message: recapData.message,
+          dailyContributions: dailyStringMap,
+          totalContributions: calculatedTotal,
+          ownedProjectsCount: ownedCount,
+          collaborationProjectsCount: collabCount,
+          totalActivityCount: activityLogs.data?.length ?? 0,
+          projectStats: recapData.projectStats,
         );
 
         emit(RecapLoaded(
           dailyDatasets: dailyDatasets,
           recapData: finalRecap,
+          activeProjectsCount: activeProjectsCount,
+          recentActivities: activityLogs.data ?? [],
         ));
       } catch (e) {
         emit(RecapError(e.toString()));
       }
     });
-  }
-
-  String _extractProjectName(String message) {
-    // Basic logic to extract project name from log message if it follows a pattern
-    // e.g., "Created task in Project X" or "Updated status in Project X"
-    if (message.contains(" in ")) {
-      return message.split(" in ").last;
-    }
-    return message;
   }
 }

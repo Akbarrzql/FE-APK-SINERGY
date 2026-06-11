@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../bloc/recap_bloc.dart';
 import '../../bloc/recap_event.dart';
 import '../../bloc/recap_state.dart';
 import '../../data/repositories/recap_repository.dart';
 import '../widgets/contribution_heatmap.dart';
+import '../../../activity_log/activity/data/models/activity_log_model.dart' as activity_log;
 
 class RecapScreen extends StatelessWidget {
   const RecapScreen({super.key});
@@ -83,10 +85,10 @@ class RecapScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Heatmap (Responsive)
+                    // Heatmap (GitHub Style)
                     ContributionHeatMap(
                       datasets: state.dailyDatasets,
-                      endDate: state.dailyDatasets.keys.reduce((a, b) => a.isAfter(b) ? a : b),
+                      endDate: DateTime.now(),
                     ),
                     
                     const SizedBox(height: 24),
@@ -100,18 +102,12 @@ class RecapScreen extends StatelessWidget {
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    
-                    // Stats Grid (Owned vs Collaboration)
-                    _buildStatsGrid(recap),
-                    
                     const SizedBox(height: 16),
                     
-                    // Detailed Project Stats Card
-                    if (recap.projectStats.isNotEmpty) ...[
-                      _buildProjectStatsCard(recap),
-                      const SizedBox(height: 24),
-                    ],
+                    // Stats Grid (Mirip GitHub overview)
+                    _buildOverviewGrid(recap, state.activeProjectsCount),
+                    
+                    const SizedBox(height: 24),
                     
                     // Contribution Activity Section
                     Text(
@@ -124,13 +120,9 @@ class RecapScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Dynamic Activity Items
-                    if (recap.projectStats.isNotEmpty)
-                      ...recap.projectStats.map((stat) => _buildActivityItem(
-                        projectName: stat.projectName,
-                        count: stat.contributionCount,
-                        isOwned: stat.isOwned,
-                      ))
+                    // Real Activity Items
+                    if (state.recentActivities.isNotEmpty)
+                      ...state.recentActivities.map((activity) => _buildActivityItem(activity))
                     else
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 32),
@@ -147,6 +139,7 @@ class RecapScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -159,66 +152,33 @@ class RecapScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsGrid(dynamic recap) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildStatItem('Owned Projects', recap.ownedProjectsCount.toString(), Colors.blue, itemWidth),
-            _buildStatItem('Collaborations', recap.collaborationProjectsCount.toString(), Colors.green, itemWidth),
-          ],
-        );
-      },
+  Widget _buildOverviewGrid(dynamic recap, int activeCount) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.6,
+      children: [
+        _buildStatItem('Owned Projects', recap.ownedProjectsCount.toString(), const Color(0xFF0969DA), Icons.folder_outlined),
+        _buildStatItem('Collaborations', recap.collaborationProjectsCount.toString(), const Color(0xFF1A7F37), Icons.people_outline),
+        _buildStatItem('Contribution Acts', recap.totalActivityCount.toString(), const Color(0xFF9A6700), Icons.bolt),
+        _buildStatItem('Active Projects', activeCount.toString(), const Color(0xFF8250DF), Icons.rocket_launch_outlined),
+      ],
     );
   }
 
-  Widget _buildStatItem(String label, String value, Color color, double width) {
+  Widget _buildStatItem(String label, String value, Color color, IconData icon) {
     return Container(
-      width: width,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProjectStatsCard(dynamic recap) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -226,59 +186,70 @@ class RecapScreen extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
             children: [
-              const Icon(Icons.bar_chart, color: Colors.grey, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Top Projects',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+              Icon(icon, size: 14, color: color.withOpacity(0.7)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          ...recap.projectStats.take(3).map((stat) => Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    stat.projectName,
-                    style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0969DA)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Text(
-                  '${stat.contributionCount} acts',
-                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          )),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildActivityItem({
-    required String projectName,
-    required int count,
-    required bool isOwned,
-  }) {
+  Widget _buildActivityItem(activity_log.Datum activity) {
+    DateTime? date;
+    if (activity.timestamp != null) {
+      date = DateTime.tryParse(activity.timestamp!);
+    }
+    
+    final timeStr = date != null ? DateFormat('MMM d').format(date) : '';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const VerticalDivider(
-              thickness: 2,
-              color: Color(0xFFD0D7DE),
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.commit, size: 14, color: Colors.grey),
+                ),
+                Expanded(
+                  child: VerticalDivider(
+                    thickness: 1,
+                    color: Colors.grey.shade200,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -286,39 +257,34 @@ class RecapScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        isOwned ? Icons.person_outline : Icons.people_outline,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
-                            children: [
-                              TextSpan(
-                                text: 'Made $count contributions to ',
-                                style: const TextStyle(fontWeight: FontWeight.w400),
-                              ),
-                              TextSpan(
-                                text: projectName,
-                                style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0969DA)),
-                              ),
-                            ],
+                        child: Text(
+                          activity.message ?? 'Unknown activity',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
+                      if (timeStr.isNotEmpty)
+                        Text(
+                          timeStr,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    isOwned ? 'Owned Project' : 'Collaboration',
+                    'Activity in ${activity.namaLengkap ?? 'Project'}',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: isOwned ? Colors.blue.shade700 : Colors.green.shade700,
-                      fontWeight: FontWeight.w500,
+                      color: Colors.blue.shade700,
                     ),
                   ),
                 ],

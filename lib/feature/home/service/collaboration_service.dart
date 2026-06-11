@@ -11,19 +11,18 @@ import 'package:gabungyuk/feature/home/model/request_collaboration_model.dart';
 import 'package:gabungyuk/feature/home/model/view_collaboration_model.dart';
 import 'package:gabungyuk/feature/home/model/pending_collaboration_model.dart';
 import 'package:gabungyuk/feature/collaboration/model/collaboration_profile_model.dart';
+import 'package:gabungyuk/core/common/http_logger.dart';
 import 'package:http/http.dart' as http;
 
 class CollaborationService {
   final SharedCode _sharedCode = SharedCode();
 
   void _logRequest(String method, String url, Map<String, dynamic>? data) {
-    developer.log('--> $method $url');
-    if (data != null) developer.log('Data: ${jsonEncode(data)}');
+    HttpLogger.logRequest(method: method, url: url, body: data);
   }
 
   void _logResponse(http.Response response) {
-    developer.log('<-- ${response.statusCode} ${response.request?.url}');
-    developer.log('Response Body: ${response.body}');
+    HttpLogger.logResponse(response);
   }
 
   Future<void> createProject({

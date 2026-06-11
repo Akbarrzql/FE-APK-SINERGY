@@ -26,6 +26,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedCategoryIndex = 0;
+  String _selectedSort = 'Terbaru';
+  String _selectedStatusFilter = 'Semua';
+
   final ProfileRepository _profileRepository = ProfileRepositoryImpl();
   final CollaborationService _collaborationService = CollaborationService();
   late TextEditingController _searchController;
@@ -36,15 +39,43 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingProjects = true;
 
   List<Datum> get _filteredProjects {
-    // Reverse the projects list to show newest first
-    final reversedProjects = _projects.reversed.toList();
-    if (_selectedCategoryIndex == 0) {
-      return reversedProjects;
+    List<Datum> filtered = List.from(_projects);
+
+    // 1. Filter by Category
+    if (_selectedCategoryIndex != 0) {
+      final category = _categories[_selectedCategoryIndex];
+      filtered = filtered.where((project) {
+        return project.category.any((cat) => cat.toLowerCase().contains(category.toLowerCase()));
+      }).toList();
     }
-    return reversedProjects
-        .where((project) =>
-            project.category.contains(_categories[_selectedCategoryIndex]))
-        .toList();
+
+    // 2. Filter by Status
+    if (_selectedStatusFilter != 'Semua') {
+      filtered = filtered.where((project) {
+        final status = project.status?.toUpperCase();
+        if (_selectedStatusFilter == 'Mencari Rekan') {
+          return status == 'OPEN';
+        } else if (_selectedStatusFilter == 'Selesai') {
+          return status == 'COMPLETED' || status == 'DONE';
+        }
+        return true;
+      }).toList();
+    }
+
+    // 3. Sorting
+    if (_selectedSort == 'Terbaru') {
+      filtered.sort((a, b) => b.id.compareTo(a.id));
+    } else if (_selectedSort == 'Terlama') {
+      filtered.sort((a, b) => a.id.compareTo(b.id));
+    } else if (_selectedSort == 'Deadline Terdekat') {
+      filtered.sort((a, b) {
+        if (a.deadline == null) return 1;
+        if (b.deadline == null) return -1;
+        return a.deadline!.compareTo(b.deadline!);
+      });
+    }
+
+    return filtered;
   }
 
   @override
@@ -126,25 +157,196 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildShimmerProjectCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              LoadingShimmer.circle(size: 40),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  LoadingShimmer(width: 120, height: 14),
+                  SizedBox(height: 6),
+                  LoadingShimmer(width: 80, height: 12),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const LoadingShimmer(width: double.infinity, height: 18),
+          const SizedBox(height: 8),
+          const LoadingShimmer(width: 200, height: 18),
+          const SizedBox(height: 16),
+          Row(
+            children: const [
+              LoadingShimmer(width: 60, height: 12),
+              SizedBox(width: 12),
+              LoadingShimmer(width: 80, height: 12),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const LoadingShimmer(width: double.infinity, height: 40),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            children: List.generate(3, (index) => const LoadingShimmer(width: 70, height: 24, borderRadius: 20)),
+          ),
+        ],
+      ),
+    );
+  }
+
   final List<String> _categories = [
     'Semua',
-    'Web Development',
-    'UI/UX Design',
     'Mobile Dev',
-    'Back End',
+    'Web Dev',
+    'UI/UX Design',
     'Data Science',
-    'Data Analyst',
+    'Artificial Intelligence',
+    'Cyber Security',
+    'DevOps',
   ];
 
 
-  Widget _buildShimmerProjectCard() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: LoadingShimmer(
-        width: double.infinity,
-        height: 180,
-        borderRadius: 20,
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Filter Proyek',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: ColorValue.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Urutan',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: ColorValue.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    children: ['Terbaru', 'Terlama', 'Deadline Terdekat'].map((sort) {
+                      final isSelected = _selectedSort == sort;
+                      return ChoiceChip(
+                        label: Text(sort),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setModalState(() => _selectedSort = sort);
+                            setState(() => _selectedSort = sort);
+                          }
+                        },
+                        selectedColor: ColorValue.primaryColor.withValues(alpha: 0.1),
+                        backgroundColor: Colors.white,
+                        labelStyle: TextStyle(
+                          color: isSelected ? ColorValue.primaryColor : ColorValue.textSecondary,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                            color: isSelected ? ColorValue.primaryColor : Colors.grey[200]!,
+                          ),
+                        ),
+                        showCheckmark: false,
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Status',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: ColorValue.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    children: ['Semua', 'Mencari Rekan', 'Selesai'].map((status) {
+                      final isSelected = _selectedStatusFilter == status;
+                      return ChoiceChip(
+                        label: Text(status),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setModalState(() => _selectedStatusFilter = status);
+                            setState(() => _selectedStatusFilter = status);
+                          }
+                        },
+                        selectedColor: ColorValue.primaryColor.withValues(alpha: 0.1),
+                        backgroundColor: Colors.white,
+                        labelStyle: TextStyle(
+                          color: isSelected ? ColorValue.primaryColor : ColorValue.textSecondary,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                            color: isSelected ? ColorValue.primaryColor : Colors.grey[200]!,
+                          ),
+                        ),
+                        showCheckmark: false,
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ColorValue.primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Terapkan Filter',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -394,37 +596,40 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: ColorValue.textPrimary,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: const [
-                            Text(
-                              'Filter',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: ColorValue.primaryColor,
-                                fontWeight: FontWeight.w500,
+                      GestureDetector(
+                        onTap: _showFilterSheet,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
                               ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: ColorValue.primaryColor,
-                              size: 18,
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Row(
+                            children: const [
+                              Text(
+                                'Filter',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: ColorValue.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: ColorValue.primaryColor,
+                                size: 18,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -443,13 +648,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       )
                     : _filteredProjects.isEmpty
-                    ? const SliverToBoxAdapter(
+                    ? SliverToBoxAdapter(
                   child: Center(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 40),
+                      padding: const EdgeInsets.only(top: 40),
                       child: Text(
-                        'Belum ada proyek di kategori ini',
-                        style: TextStyle(
+                        _selectedCategoryIndex == 0 && _selectedStatusFilter == 'Semua'
+                            ? 'Belum ada proyek tersedia'
+                            : 'Tidak ada proyek yang sesuai dengan filter',
+                        style: const TextStyle(
                           color: ColorValue.textSecondary,
                           fontSize: 14,
                         ),

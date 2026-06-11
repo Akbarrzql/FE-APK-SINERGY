@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
 import 'package:gabungyuk/feature/profile/model/profile_model.dart';
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
+import 'package:gabungyuk/core/common/http_logger.dart';
 import 'package:http/http.dart' as http;
 import '../model/edit_profile_model.dart';
 
@@ -33,40 +33,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       },
     );
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final profile = profileModelFromJson(response.body);
-      return profile;
-    } else {
-      String message = 'Terjadi kesalahan. Silakan coba lagi.';
-      try {
-        final Map<String, dynamic> json = jsonDecode(response.body);
-        if (json.containsKey('details')) {
-          // prefer details when available (server may include SQL error info here)
-          message = json['details'].toString();
-        } else if (json.containsKey('message')) {
-          message = json['message'].toString();
-        } else if (json.containsKey('msg')) {
-          message = json['msg'].toString();
-        } else if (json.containsKey('details')) {
-          message = json['details'].toString();
-        }
-      } catch (_) {
-        // ignore
-      }
-
-      if (response.statusCode == 400) {
-        print('Bad request response: ${response.body}');
-        message = message.isNotEmpty ? message : 'Permintaan tidak valid. Periksa kembali input.';
-      } else if (response.statusCode == 401) {
-        print('Unauthorized response: ${response.body}');
-        message = 'Sesi Anda telah berakhir. Silakan masuk kembali.';
-      } else if (response.statusCode >= 500) {
-        print('Server error response: ${response.body}');
-        message = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
-      }
-
-      throw ApiException(message, response.statusCode);
-    }
+    return _handleResponse(response, (body) => profileModelFromJson(body));
   }
 
   @override
@@ -82,17 +49,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       },
     );
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final profile = viewProfileModelFromJson(response.body);
-      return profile;
-    } else {
-      String message = 'Terjadi kesalahan. Silakan coba lagi.';
-      try {
-        final Map<String, dynamic> json = jsonDecode(response.body);
-        message = json['message'] ?? json['msg'] ?? json['details'] ?? message;
-      } catch (_) {}
-      throw ApiException(message, response.statusCode);
-    }
+    return _handleResponse(response, (body) => viewProfileModelFromJson(body));
   }
 
   @override
@@ -108,14 +65,94 @@ class ProfileRepositoryImpl implements ProfileRepository {
       },
     );
 
+    return _handleResponse(response, (body) => viewProfileModelFromJson(body));
+  }
+
+  @override
+  Future<EditProfileModel> updateProfile(Map<String, dynamic> body,
+      {File? profileImageFile}) async {
+    final token = await _sharedCode.getAuthToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/update/users/current');
+
+    try {
+      if (profileImageFile == null) {
+        // If no file, use JSON endpoint (application/json)
+        HttpLogger.logRequest(
+          method: 'PATCH',
+          url: url.toString(),
+          headers: {
+            HttpHeaders.contentTypeHeader: 'application/json',
+            HttpHeaders.authorizationHeader: 'Bearer $token',
+          },
+          body: body,
+        );
+
+        final response = await http.patch(
+          url,
+          headers: {
+            HttpHeaders.contentTypeHeader: 'application/json',
+            HttpHeaders.authorizationHeader: 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        );
+
+        return _handleResponse(response, (b) => editProfileModelFromJson(b));
+      } else {
+        // If there's a file, use MultipartRequest (multipart/form-data)
+        // Backend expects JSON in "data" part and file in "profilePicture" part
+        var request = http.MultipartRequest('PATCH', url);
+        request.headers[HttpHeaders.authorizationHeader] = 'Bearer $token';
+
+        // Masukkan data JSON ke field 'data'
+        request.fields['data'] = jsonEncode(body);
+
+        // Tambahkan file gambar
+        request.files.add(await http.MultipartFile.fromPath(
+          'profilePictureFile',
+          profileImageFile.path,
+        ));
+
+        HttpLogger.logRequest(
+          method: 'PATCH',
+          url: url.toString(),
+          headers: request.headers,
+          fields: request.fields,
+        );
+
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+        return _handleResponse(response, (b) => editProfileModelFromJson(b));
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      if (kDebugMode) {
+        print('Update Profile Exception: $e');
+      }
+      throw ApiException('Gagal memperbarui profil: ${e.toString()}', 500);
+    }
+  }
+
+  T _handleResponse<T>(http.Response response, T Function(String) mapper) {
+    HttpLogger.logResponse(response);
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return viewProfileModelFromJson(response.body);
+      try {
+        return mapper(response.body);
+      } catch (e) {
+        if (kDebugMode) print('Mapping Error: $e');
+        throw ApiException('Gagal memproses data dari server', response.statusCode);
+      }
     }
 
-    String message = 'Terjadi kesalahan. Silakan coba lagi.';
+    String message = 'Terjadi kesalahan (${response.statusCode}).';
     try {
       final Map<String, dynamic> json = jsonDecode(response.body);
-      message = json['message'] ?? json['msg'] ?? json['details'] ?? message;
+      // Try various common error fields from backend
+      message = json['details']?.toString() ??
+                json['message']?.toString() ??
+                json['msg']?.toString() ??
+                message;
     } catch (_) {}
 
     if (response.statusCode == 400) {
@@ -128,94 +165,4 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
     throw ApiException(message, response.statusCode);
   }
-
-   Future<EditProfileModel> updateProfile(Map<String, dynamic> body, {File? profileImageFile}) async {
-     final token = await _sharedCode.getAuthToken();
-     final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/update/users/current');
-
-    try {
-        // If there is no image, send the payload as JSON exactly as the backend expects,
-        // e.g. {"keahlian":["sepatu roda"]}.
-        if (profileImageFile == null) {
-          final response = await http.patch(
-            url,
-            headers: {
-              HttpHeaders.contentTypeHeader: 'application/json',
-              HttpHeaders.authorizationHeader: 'Bearer $token',
-            },
-            body: jsonEncode(body),
-          );
-
-          if (kDebugMode) {
-            debugPrint('PROFILE UPDATE DEBUG: sending JSON PATCH to $url');
-            debugPrint('PROFILE UPDATE DEBUG: body: ${jsonEncode(body)}');
-            debugPrint('PROFILE UPDATE DEBUG: response body: ${response.body}');
-          }
-
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            return editProfileModelFromJson(response.body);
-          }
-
-          String message = 'Terjadi kesalahan. Silakan coba lagi.';
-          try {
-            final Map<String, dynamic> json = jsonDecode(response.body);
-            message = json['message'] ?? json['msg'] ?? json['details'] ?? message;
-          } catch (_) {}
-          throw ApiException(message, response.statusCode);
-        }
-
-      final request = http.MultipartRequest('PATCH', url);
-      request.headers[HttpHeaders.authorizationHeader] = 'Bearer $token';
-
-        // For multipart updates, send the whole JSON body as a single text part.
-        // This keeps arrays like `keahlian` intact for backend deserialization.
-        request.fields['data'] = jsonEncode(body);
-
-      // Backend expects 'profilePicture' as a MultipartFile in a RequestPart
-        {
-        final stream = http.ByteStream(profileImageFile.openRead());
-        final length = await profileImageFile.length();
-        
-        final multipartFile = http.MultipartFile(
-          'profilePicture',
-          stream,
-          length,
-          filename: profileImageFile.path.split('/').last,
-        );
-        request.files.add(multipartFile);
-      }
-
-      if (kDebugMode) {
-        debugPrint('PROFILE UPDATE DEBUG: sending Multipart PATCH to $url');
-        debugPrint('PROFILE UPDATE DEBUG: fields: ${request.fields}');
-        debugPrint('PROFILE UPDATE DEBUG: files: ${request.files.map((f) => '${f.field}:${f.contentType.toString()}').toList()}');
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      if (kDebugMode)
-        debugPrint('PROFILE UPDATE DEBUG: response body: ${response.body}');
-
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final editModel = editProfileModelFromJson(response.body);
-        
-        // Note: We no longer save the token from the backend response here 
-        // because we are now using Firebase ID Token as the primary auth session.
-
-        return editModel;
-      } else {
-        String message = 'Terjadi kesalahan. Silakan coba lagi.';
-        try {
-          final Map<String, dynamic> json = jsonDecode(response.body);
-          message = json['message'] ?? json['msg'] ?? json['details'] ?? message;
-        } catch (_) {}
-        throw ApiException(message, response.statusCode);
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Gagal memperbarui profil: $e', 500);
-    }
-   }
 }
-

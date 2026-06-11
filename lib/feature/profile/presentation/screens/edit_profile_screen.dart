@@ -60,8 +60,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _instagramController = TextEditingController(text: p?.instagram?.toString() ?? '');
     _facebookController = TextEditingController(text: p?.facebook?.toString() ?? '');
     _linkedinController = TextEditingController(text: p?.linkedin?.toString() ?? '');
-    // If existing profile picture is a data URI, keep it available (do not decode now)
-    // _pickedImageDataUri stays null unless user picks a new image or removes it
+    
+    _keahlianFocusNode.addListener(_handleKeahlianFocusChange);
+  }
+
+  void _handleKeahlianFocusChange() {
+    if (!_keahlianFocusNode.hasFocus) {
+      _addKeahlian(_keahlianController.text);
+    }
   }
 
   @override
@@ -158,14 +164,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           AuthUiHelper.showError(context, state.message);
         }
       },
-      child: Scaffold(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (context.read<ProfileBloc>().state is ProfileUpdateSuccess) {
+            Navigator.of(context).pop(true);
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
+        child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              // Jika state terakhir adalah sukses, beri tahu layar sebelumnya untuk refresh
+              if (context.read<ProfileBloc>().state is ProfileUpdateSuccess) {
+                Navigator.pop(context, true);
+              } else {
+                Navigator.pop(context);
+              }
+            },
           ),
           title: Text(
             'Edit Profile',
@@ -274,6 +297,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -402,9 +426,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickImageFromGallery() async {
     try {
-      // iOS gallery can be opened directly via image_picker (no permission prompt needed)
-      final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 75, maxWidth: 1200);
+      // Perkecil ukuran gambar dan kualitas agar Base64 tidak terlalu besar (Penyebab umum Error 500)
+      final picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 50, 
+        maxWidth: 800,
+      );
       if (picked == null) return;
+
+      final file = File(picked.path);
+      final sizeInBytes = await file.length();
+      final sizeInMb = sizeInBytes / (1024 * 1024);
+
+      if (sizeInMb > 10) {
+        if (mounted) {
+          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+        }
+        return;
+      }
 
       setState(() {
         _pickedImageFile = picked;
@@ -434,9 +473,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return;
       }
 
-      // Pick image from camera
-      final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 75, maxWidth: 1200);
+      // Pick image from camera dengan optimasi ukuran
+      final picked = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 50,
+        maxWidth: 800,
+      );
       if (picked == null) return;
+
+      final file = File(picked.path);
+      final sizeInBytes = await file.length();
+      final sizeInMb = sizeInBytes / (1024 * 1024);
+
+      if (sizeInMb > 10) {
+        if (mounted) {
+          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+        }
+        return;
+      }
 
       setState(() {
         _pickedImageFile = picked;
@@ -563,7 +617,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 onChanged: (val) {
-                  if (val.isNotEmpty && (val.endsWith(' ') || val.endsWith(','))) {
+                  if (val.isNotEmpty && val.endsWith(',')) {
                     _addKeahlian(val.substring(0, val.length - 1));
                   }
                 },
@@ -580,22 +634,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _addKeahlian(String val) {
-    final clean = val.trim();
-    if (clean.isNotEmpty) {
+    if (val.isEmpty) {
+      _keahlianController.clear();
+      return;
+    }
+
+    // Mendukung input multiple via koma
+    final parts = val.split(',');
+
+    for (var part in parts) {
+      final clean = part.trim();
+      if (clean.isEmpty) continue;
+
       if (!SharedCode.isITSector(clean)) {
-        AuthUiHelper.showError(context, 'Keahlian harus dalam lingkup IT');
-        _keahlianController.clear();
-        return;
+        AuthUiHelper.showError(context, 'Keahlian "$clean" harus dalam lingkup IT');
+        continue;
       }
+
       if (!_keahlianList.contains(clean)) {
         setState(() {
           _keahlianList.add(clean);
         });
       }
-      _keahlianController.clear();
-    } else {
-      _keahlianController.clear();
     }
+    _keahlianController.clear();
   }
 
   // Helper untuk TextField agar bentuknya rapi dan konsisten

@@ -109,33 +109,91 @@ class SharedCode {
   }
 
   static const List<String> itScopeCategories = [
+    // Development
     'Web Development',
     'Mobile Development',
+    'Frontend Development',
+    'Backend Development',
+    'Fullstack Development',
+    'Game Development',
+    'Embedded Systems',
+    'Desktop Development',
+    'App Development',
+    'Software Engineering',
+    'Mobile Dev',
+    'Web Dev',
+    
+    // Design
     'UI/UX Design',
+    'Graphic Design',
+    'Product Design',
+    'Interaction Design',
+    'Visual Design',
+    'Web Design',
+    
+    // Data & AI
     'Data Science',
     'Artificial Intelligence',
-    'Cyber Security',
-    'Cloud Computing',
-    'Game Development',
-    'DevOps',
-    'Backend Development',
-    'Frontend Development',
-    'Fullstack Development',
-    'Mobile Dev',
-    'Back End',
+    'Machine Learning',
+    'Deep Learning',
     'Data Analyst',
+    'Data Engineer',
+    'Business Intelligence',
+    'Big Data',
+    'Natural Language Processing',
+    'Computer Vision',
+    
+    // Infrastructure & Ops
+    'Cloud Computing',
+    'DevOps',
+    'Cyber Security',
+    'Network Engineer',
+    'System Administrator',
+    'Database Administrator',
+    'Information Security',
+    'Site Reliability Engineering',
+    'IT Support',
+    
+    // Others
     'Internet of Things (IoT)',
     'Quality Assurance',
-    'Database Administrator',
-    'Network Engineer',
+    'Blockchain',
+    'Project Management',
+    'Product Management',
+    'Agile',
+    'Scrum',
+    'Digital Marketing',
+    'SEO',
   ];
 
+  /// Intelligent IT Sector check
   static bool isITSector(String value) {
-    final lowerValue = value.toLowerCase();
-    return itScopeCategories.any((cat) => 
-      cat.toLowerCase() == lowerValue || 
-      lowerValue.contains(cat.toLowerCase())
-    );
+    if (value.trim().isEmpty) return false;
+    
+    final lowerValue = value.toLowerCase().trim();
+    
+    // 1. Direct or partial match with the predefined list
+    bool directMatch = itScopeCategories.any((cat) {
+      final lowerCat = cat.toLowerCase();
+      return lowerValue == lowerCat || 
+             lowerValue.contains(lowerCat) || 
+             lowerCat.contains(lowerValue);
+    });
+    
+    if (directMatch) return true;
+
+    // 2. Keyword-based matching for more flexibility
+    final List<String> itKeywords = [
+      'developer', 'dev', 'engineer', 'programmer', 'coding', 'code',
+      'design', 'data', 'analytics', 'intelligence', 'security', 'cyber',
+      'cloud', 'network', 'system', 'admin', 'software', 'hardware',
+      'web', 'mobile', 'android', 'ios', 'flutter', 'react', 'java', 'python',
+      'javascript', 'php', 'golang', 'kotlin', 'swift', 'c++', 'c#', 'ruby',
+      'ai', 'ml', 'nlp', 'automation', 'test', 'qa', 'ux', 'ui', 'product',
+      'tech', 'digital', 'base', 'computing', 'api', 'server', 'linux'
+    ];
+
+    return itKeywords.any((keyword) => lowerValue.contains(keyword));
   }
 
   Future<bool> setToken(String token, String value) async {

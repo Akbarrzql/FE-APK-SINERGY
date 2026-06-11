@@ -49,6 +49,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   late final TextEditingController _descController;
   late final TextEditingController _categoryController;
   late final TextEditingController _repoController;
+  final FocusNode _categoryFocusNode = FocusNode();
   final List<String> _selectedCategories = [];
 
   late String _selectedStatus;
@@ -88,6 +89,14 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     _selectedStatus = _mapBackendStatus(data.status);
     _existingImageUrl = data.imageUrl;
       _selectedDeadline = data.deadline;
+    
+    _categoryFocusNode.addListener(_handleCategoryFocusChange);
+  }
+
+  void _handleCategoryFocusChange() {
+    if (!_categoryFocusNode.hasFocus) {
+      _addCategory(_categoryController.text);
+    }
   }
 
   String _mapBackendStatus(String? status) {
@@ -116,12 +125,25 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     _descController.dispose();
     _categoryController.dispose();
     _repoController.dispose();
+    _categoryFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) setState(() => _newImagePath = picked.path);
+    if (picked != null) {
+      final file = File(picked.path);
+      final sizeInBytes = await file.length();
+      final sizeInMb = sizeInBytes / (1024 * 1024);
+
+      if (sizeInMb > 10) {
+        if (mounted) {
+          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+        }
+        return;
+      }
+      setState(() => _newImagePath = picked.path);
+    }
   }
 
   Future<void> _pickDeadline() async {
@@ -668,6 +690,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
               IntrinsicWidth(
                 child: TextField(
                   controller: _categoryController,
+                  focusNode: _categoryFocusNode,
                   style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
                   decoration: InputDecoration(
                     hintText: _selectedCategories.isEmpty ? 'Ketik lalu tekan enter' : null,
@@ -676,11 +699,14 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
                     contentPadding: const EdgeInsets.symmetric(vertical: 6),
                   ),
                   onChanged: (value) {
-                    if (value.isNotEmpty && (value.endsWith(' ') || value.endsWith(','))) {
+                    if (value.isNotEmpty && value.endsWith(',')) {
                       _addCategory(value.substring(0, value.length - 1));
                     }
                   },
-                  onSubmitted: _addCategory,
+                  onSubmitted: (value) {
+                    _addCategory(value);
+                    _categoryFocusNode.requestFocus();
+                  },
                 ),
               ),
             ],
@@ -726,20 +752,26 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   }
 
   void _addCategory(String value) {
-    final clean = value.trim();
-    if (clean.isEmpty) {
+    if (value.isEmpty) {
       _categoryController.clear();
       return;
     }
 
-    if (!SharedCode.isITSector(clean)) {
-      AuthUiHelper.showError(context, 'Kategori harus dalam lingkup IT');
-      _categoryController.clear();
-      return;
-    }
+    // Mendukung input multiple via koma
+    final parts = value.split(',');
 
-    if (!_selectedCategories.contains(clean)) {
-      setState(() => _selectedCategories.add(clean));
+    for (var part in parts) {
+      final clean = part.trim();
+      if (clean.isEmpty) continue;
+
+      if (!SharedCode.isITSector(clean)) {
+        AuthUiHelper.showError(context, 'Kategori "$clean" harus dalam lingkup IT');
+        continue;
+      }
+
+      if (!_selectedCategories.contains(clean)) {
+        setState(() => _selectedCategories.add(clean));
+      }
     }
     _categoryController.clear();
   }

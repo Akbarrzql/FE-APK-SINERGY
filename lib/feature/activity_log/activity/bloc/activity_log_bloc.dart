@@ -16,5 +16,11 @@ class ActivityLogBloc extends Bloc<ActivityLogEvent, ActivityLogState> {
         emit(ActivityLogError(e.toString()));
       }
     });
+
+    on<FetchActivityRecap>((event, emit) async {
+      // In case we want to fetch only recap or update it
+      // Usually we fetch both together in this specific UX
+      add(FetchActivityLogs());
+    });
   }
 }

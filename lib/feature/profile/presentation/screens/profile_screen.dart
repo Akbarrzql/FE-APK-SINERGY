@@ -252,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ProfileModel? p;
                       if (state is ProfileLoaded) p = state.profile;
 
-                      final result = await Navigator.push<bool?>(
+                      await Navigator.push<bool?>(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BlocProvider.value(
@@ -261,7 +261,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       );
-                      if (result == true) _profileBloc.add(LoadProfile());
+                      // Selalu panggil LoadProfile saat kembali dari halaman Edit Profile
+                      _profileBloc.add(LoadProfile());
                     },
                   ),
                   _divider(),

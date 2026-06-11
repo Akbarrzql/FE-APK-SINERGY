@@ -8,7 +8,8 @@ class ActivityLogLoading extends ActivityLogState {}
 
 class ActivityLogLoaded extends ActivityLogState {
   final List<Datum> activities;
-  ActivityLogLoaded(this.activities);
+  final Map<String, int>? recap;
+  ActivityLogLoaded(this.activities, {this.recap});
 }
 
 class ActivityLogError extends ActivityLogState {

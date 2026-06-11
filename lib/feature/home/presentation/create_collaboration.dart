@@ -21,6 +21,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   final _categoryController = TextEditingController();
   final _repoController = TextEditingController();
   final _urlController = TextEditingController();
+  final FocusNode _categoryFocusNode = FocusNode();
   final List<String> _selectedCategories = [];
   final SharedCode _sharedCode = SharedCode();
 
@@ -36,19 +37,44 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _categoryFocusNode.addListener(_handleCategoryFocusChange);
+  }
+
+  void _handleCategoryFocusChange() {
+    if (!_categoryFocusNode.hasFocus) {
+      _addCategory(_categoryController.text);
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
     _categoryController.dispose();
     _repoController.dispose();
     _urlController.dispose();
+    _categoryFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) setState(() => _imagePath = picked.path);
+    if (picked != null) {
+      final file = File(picked.path);
+      final sizeInBytes = await file.length();
+      final sizeInMb = sizeInBytes / (1024 * 1024);
+
+      if (sizeInMb > 10) {
+        if (mounted) {
+          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+        }
+        return;
+      }
+      setState(() => _imagePath = picked.path);
+    }
   }
 
   Future<void> _pickDeadline() async {
@@ -416,6 +442,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                 IntrinsicWidth(
                   child: TextField(
                     controller: _categoryController,
+                    focusNode: _categoryFocusNode,
                     style: const TextStyle(fontSize: 14, color: ColorValue.textPrimary),
                     decoration: InputDecoration(
                       hintText: _selectedCategories.isEmpty ? 'Ketik lalu tekan enter' : null,
@@ -424,11 +451,14 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       contentPadding: const EdgeInsets.symmetric(vertical: 6),
                     ),
                     onChanged: (value) {
-                      if (value.isNotEmpty && (value.endsWith(' ') || value.endsWith(','))) {
+                      if (value.isNotEmpty && value.endsWith(',')) {
                         _addCategory(value.substring(0, value.length - 1));
                       }
                     },
-                    onSubmitted: _addCategory,
+                    onSubmitted: (value) {
+                      _addCategory(value);
+                      _categoryFocusNode.requestFocus();
+                    },
                   ),
                 ),
               ],
@@ -475,20 +505,26 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
   }
 
   void _addCategory(String value) {
-    final clean = value.trim();
-    if (clean.isEmpty) {
-      _categoryController.clear();
-      return;
-    }
-    
-    if (!SharedCode.isITSector(clean)) {
-      AuthUiHelper.showError(context, 'Kategori harus dalam lingkup IT');
+    if (value.isEmpty) {
       _categoryController.clear();
       return;
     }
 
-    if (!_selectedCategories.contains(clean)) {
-      setState(() => _selectedCategories.add(clean));
+    // Mendukung input multiple via koma
+    final parts = value.split(',');
+
+    for (var part in parts) {
+      final clean = part.trim();
+      if (clean.isEmpty) continue;
+
+      if (!SharedCode.isITSector(clean)) {
+        AuthUiHelper.showError(context, 'Kategori "$clean" harus dalam lingkup IT');
+        continue;
+      }
+
+      if (!_selectedCategories.contains(clean)) {
+        setState(() => _selectedCategories.add(clean));
+      }
     }
     _categoryController.clear();
   }

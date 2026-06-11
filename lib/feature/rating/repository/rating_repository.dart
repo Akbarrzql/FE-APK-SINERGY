@@ -7,6 +7,7 @@ import 'package:gabungyuk/feature/rating/model/create_rating_model.dart';
 import 'package:gabungyuk/feature/rating/model/user_rating_by_project_model.dart';
 import 'package:gabungyuk/feature/rating/model/user_rating_average_model.dart';
 import 'package:gabungyuk/feature/rating/user_rating_in_project.dart';
+import 'package:gabungyuk/core/common/http_logger.dart';
 import 'package:http/http.dart' as http;
 
 abstract class RatingRepository {
@@ -32,6 +33,7 @@ class RatingRepositoryImpl implements RatingRepository {
       },
       body: jsonEncode(rating.toJson()),
     );
+    HttpLogger.logResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
@@ -57,6 +59,7 @@ class RatingRepositoryImpl implements RatingRepository {
         HttpHeaders.authorizationHeader: 'Bearer $token',
       },
     );
+    HttpLogger.logResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return UserRatingInProject.fromRawJson(response.body);
@@ -82,6 +85,7 @@ class RatingRepositoryImpl implements RatingRepository {
         HttpHeaders.authorizationHeader: 'Bearer $token',
       },
     );
+    HttpLogger.logResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return UserRatingByProjectModel.fromRawJson(response.body);
@@ -107,6 +111,7 @@ class RatingRepositoryImpl implements RatingRepository {
         HttpHeaders.authorizationHeader: 'Bearer $token',
       },
     );
+    HttpLogger.logResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return UserRatingAverageModel.fromRawJson(response.body);

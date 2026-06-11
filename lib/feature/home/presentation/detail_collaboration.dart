@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
@@ -208,18 +210,41 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
   bool _isExpanded = false;
   late String _projectStatus;
   List<project_rating.Datum> _projectRatings = [];
+  bool _hasRequestedLocally = false;
 
   @override
   void initState() {
     super.initState();
     _projectStatus = _mapBackendStatus(widget.project.status);
+    _checkLocalRequestStatus();
     _fetchProjectDetail();
+  }
+
+  Future<void> _checkLocalRequestStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'requested_join_${widget.project.id}';
+    if (mounted) {
+      setState(() {
+        _hasRequestedLocally = prefs.getBool(key) ?? false;
+      });
+    }
+  }
+
+  Future<void> _markAsRequestedLocally() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'requested_join_${widget.project.id}';
+    await prefs.setBool(key, true);
+    if (mounted) {
+      setState(() {
+        _hasRequestedLocally = true;
+      });
+    }
   }
 
   Future<void> _fetchProjectDetail() async {
     try {
       final detail = await _collaborationService.getProjectDetail(widget.project.id);
-      
+
       collab_model.ViewCollaborationModel? collab;
       pending_model.PendingCollaborationModel? pending;
 
@@ -267,7 +292,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
 
   String _mapBackendStatus(String? status) {
     if (status == null) return 'Belum Dimulai';
-    
+
     // Jika status sudah dalam bahasa Indonesia, langsung kembalikan
     if (_statusOptions.contains(status)) return status;
 
@@ -321,7 +346,6 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     final project = _detailModel?.data.project;
     final allCollaborators = _detailModel?.data.collaborators ?? [];
     final isProjectOwner = widget.owner?.idPengguna == widget.project.owner.id;
-    final userJoinStatus = (_collaborationModel?.data?.status ?? _detailModel?.data.status)?.toUpperCase();
     final ratingByUserId = <int, double>{};
 
     for (final userId in _projectRatings.map((e) => e.ratedUserId).whereType<int>().toSet()) {
@@ -331,10 +355,13 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
       ratingByUserId[userId] = average;
     }
 
-    // Filter members for clarity
-    final acceptedMembers = allCollaborators.where((m) => m.requestStatus.toUpperCase() == 'ACCEPTED').toList();
+    final acceptedMembers = allCollaborators.where((c) => c.requestStatus.toUpperCase() == 'ACCEPTED').toList();
     // For owner view, separate requests from team. For others, show everyone with status badges.
     final displayMembers = isProjectOwner ? acceptedMembers : allCollaborators;
+
+    final isUserAccepted = (isProjectOwner || _collaborationModel?.data?.status?.toUpperCase() == 'ACCEPTED' || 
+        allCollaborators.any((c) => c.idPengguna == widget.owner?.idPengguna && c.requestStatus.toUpperCase() == 'ACCEPTED'));
+    final showFullDetails = isProjectOwner || isUserAccepted;
 
     final fullDescription = project?.description ?? widget.project.description;
     final shortDesc = fullDescription.length > 100
@@ -394,16 +421,16 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             context,
                             MaterialPageRoute(
                               builder: (_) => EditCollaborationPage(
-                                 initialData: CollaborationData(
-                                   id: widget.project.id.toString(),
-                                   title: project?.title ?? widget.project.title,
-                                   description: project?.description ?? widget.project.description,
-                                   category: List<String>.from(project?.category ?? widget.project.category),
-                                   status: _projectStatus,
-                                   repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
-                                   imageUrl: project?.projectPicture ?? widget.project.projectPicture,
-                                   deadline: project?.deadline ?? widget.project.deadline,
-                                 ),
+                                initialData: CollaborationData(
+                                  id: widget.project.id.toString(),
+                                  title: project?.title ?? widget.project.title,
+                                  description: project?.description ?? widget.project.description,
+                                  category: List<String>.from(project?.category ?? widget.project.category),
+                                  status: _projectStatus,
+                                  repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
+                                  imageUrl: project?.projectPicture ?? widget.project.projectPicture,
+                                  deadline: project?.deadline ?? widget.project.deadline,
+                                ),
                               ),
                             ),
                           ).then((value) {
@@ -424,14 +451,14 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: (project?.projectPicture != null && project!.projectPicture.isNotEmpty)
-                  ? Image.network(
+                      ? Image.network(
                     project.projectPicture,
                     height: 220,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
                   )
-                  : _buildPlaceholderImage(),
+                      : _buildPlaceholderImage(),
                 ),
               ),
             ),
@@ -580,6 +607,41 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                             .map((cat) => SkillTag(label: cat)),
                       ],
                     ),
+
+                    if (showFullDetails) ...[
+                      const SizedBox(height: 28),
+                      const Text(
+                        'Detail Proyek Lengkap',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: ColorValue.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailItem(
+                        icon: Icons.link_rounded,
+                        label: 'Link Repository',
+                        value: project?.repositoryLink ?? widget.project.repositoryLink ?? 'Tidak ada link',
+                        onTap: () async {
+                          final link = project?.repositoryLink ?? widget.project.repositoryLink;
+                          if (link != null && link.isNotEmpty) {
+                            final url = Uri.parse(link);
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url);
+                            }
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailItem(
+                        icon: Icons.calendar_month_rounded,
+                        label: 'Deadline',
+                        value: project?.deadline != null
+                            ? '${project!.deadline!.day}/${project.deadline!.month}/${project.deadline!.year}'
+                            : 'Tidak ada deadline',
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -648,7 +710,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                       ],
                     );
 
-},
+                  },
                   childCount: displayMembers.length,
                 ),
               ),
@@ -699,7 +761,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (context, i) {
+                        (context, i) {
                       final m = _pendingModel!.data!.collaborators![i];
                       return Column(
                         children: [
@@ -729,7 +791,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
 
             // ── Join Button ────────────────────────────────────────────────
             if (widget.owner?.idPengguna != widget.project.owner.id &&
-                userJoinStatus != 'ACCEPTED' &&
+                !isUserAccepted &&
                 _projectStatus != 'Project Berakhir')
               SliverToBoxAdapter(
                 child: Padding(
@@ -738,26 +800,26 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: (userJoinStatus == 'ACCEPTED' || 
-                                  userJoinStatus == 'PENDING' ||
-                                  userJoinStatus == 'WAITING' ||
-                                  userJoinStatus == 'REQUESTED')
-                          ? null 
+                      onPressed: (_collaborationModel?.data?.status?.toUpperCase() == 'ACCEPTED' ||
+                          _collaborationModel?.data?.status?.toUpperCase() == 'PENDING' ||
+                          _hasRequestedLocally)
+                          ? null
                           : () async {
-                              try {
-                                setState(() => _isLoading = true);
-                                await _collaborationService.requestJoin(widget.project.id);
-                                if (mounted) {
-                                  AuthUiHelper.showSuccess(context, 'Berhasil mengirim permintaan bergabung');
-                                  _fetchProjectDetail();
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  AuthUiHelper.showError(context, 'Terjadi kesalahan: $e');
-                                  setState(() => _isLoading = false);
-                                }
-                              }
-                            },
+                        try {
+                          setState(() => _isLoading = true);
+                          await _collaborationService.requestJoin(widget.project.id);
+                          await _markAsRequestedLocally();
+                          if (mounted) {
+                            AuthUiHelper.showSuccess(context, 'Berhasil mengirim permintaan bergabung');
+                            _fetchProjectDetail();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            AuthUiHelper.showError(context, 'Terjadi kesalahan: $e');
+                            setState(() => _isLoading = false);
+                          }
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ColorValue.primaryColor,
                         foregroundColor: Colors.white,
@@ -768,7 +830,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                         elevation: 0,
                       ),
                       child: Text(
-                        _getJoinButtonText(userJoinStatus),
+                        _hasRequestedLocally && _collaborationModel?.data?.status == null
+                            ? 'Menunggu Persetujuan'
+                            : _getJoinButtonText(_collaborationModel?.data?.status),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -837,7 +901,6 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     description: project?.description ?? widget.project.description,
                     category: List<String>.from(project?.category ?? widget.project.category),
                     status: newBackendStatus,
-                    oldStatus: oldBackendStatus,
                     repositoryLink: project?.repositoryLink ?? widget.project.repositoryLink ?? '',
                   );
 
@@ -845,8 +908,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     AuthUiHelper.showSuccess(context, 'Status diperbarui ke $s');
                   }
 
-                  if ((newBackendStatus == 'COMPLETED' || newBackendStatus == 'DONE') &&
-                      (oldBackendStatus != 'COMPLETED' && oldBackendStatus != 'DONE')) {
+                  if (newBackendStatus == 'COMPLETED' && oldBackendStatus != 'COMPLETED') {
                     await _showCompletionRatingFlow();
                   }
                 } catch (e) {
@@ -898,11 +960,11 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
 
       final collaboratorInfos = collaborators
           .map((c) => CollaboratorInfo(
-                userId: c.idPengguna,
-                userName: c.namaLengkap,
-                profilePicture: c.profilePicture,
-                role: c.role,
-              ))
+        userId: c.idPengguna,
+        userName: c.namaLengkap,
+        profilePicture: c.profilePicture,
+        role: c.role,
+      ))
           .toList();
 
       await showDialog(
@@ -950,7 +1012,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     if (status == null) return 'Bergabung';
     final s = status.toUpperCase();
     if (s == 'ACCEPTED') return 'Sudah Bergabung';
-    if (s == 'PENDING' || s == 'WAITING' || s == 'REQUESTED') return 'Menunggu Persetujuan';
+    if (s == 'PENDING') return 'Menunggu Persetujuan';
     return 'Bergabung';
   }
 
@@ -960,6 +1022,65 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
       width: double.infinity,
       color: Colors.grey[300],
       child: const Icon(Icons.image, size: 50, color: Colors.grey),
+    );
+  }
+
+  Widget _buildDetailItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: ColorValue.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: ColorValue.primaryColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: onTap != null ? ColorValue.primaryColor : ColorValue.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              const Icon(Icons.open_in_new_rounded, size: 16, color: ColorValue.primaryColor),
+          ],
+        ),
+      ),
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:gabungyuk/core/common/api_config.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
 import 'package:gabungyuk/feature/search/model/screen_model.dart';
+import 'package:gabungyuk/core/common/http_logger.dart';
 import 'package:http/http.dart' as http;
 
 abstract class SearchRepository {
@@ -26,6 +27,7 @@ class SearchRepositoryImpl implements SearchRepository {
         HttpHeaders.authorizationHeader: 'Bearer $token',
       },
     );
+    HttpLogger.logResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return SearchModel.fromRawJson(response.body);

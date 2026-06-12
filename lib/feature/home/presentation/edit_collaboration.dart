@@ -190,8 +190,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
         ? prevStatusRaw.toUpperCase()
         : _mapToBackendStatus(prevStatusRaw);
 
-    final isChangingToCompleted = (backendStatus == 'COMPLETED' || backendStatus == 'DONE') &&
-        (prevBackendStatus != 'COMPLETED' && prevBackendStatus != 'DONE');
+    final isChangingToCompleted = backendStatus == 'COMPLETED' && prevBackendStatus != 'COMPLETED';
 
     showDialog(
       context: context,

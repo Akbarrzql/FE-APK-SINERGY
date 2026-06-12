@@ -488,7 +488,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: (widget.owner?.idPengguna == widget.project.owner.id)
+                          onTap: (widget.owner?.idPengguna == widget.project.owner.id && _projectStatus != 'Project Berakhir')
                               ? () => _showStatusPicker(context)
                               : null,
                           child: Container(
@@ -523,7 +523,9 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                                 if (widget.owner?.idPengguna == widget.project.owner.id) ...[
                                   const SizedBox(width: 6),
                                   Icon(
-                                    Icons.keyboard_arrow_down_rounded,
+                                    _projectStatus == 'Project Berakhir'
+                                        ? Icons.lock_rounded
+                                        : Icons.keyboard_arrow_down_rounded,
                                     size: 16,
                                     color: _statusColor(_projectStatus),
                                   ),

@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
          TextButton(
            onPressed: () {
              Navigator.pop(context);
-             AuthUiHelper.showInfo(
+             AuthUiHelper.showError(
                context,
                'Silakan gunakan tombol "Masuk dengan Google".',
              );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import '../../../../core/common/color_value.dart';
 import 'category_chip.dart';
 import 'skill_tag.dart';
@@ -27,10 +28,11 @@ class MemberAvatarStack extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
-                child: CircleAvatar(
-                  radius: avatarSize / 2,
-                  backgroundImage: NetworkImage(images[i]),
-                  backgroundColor: Colors.grey[300],
+                child: ProfileAvatar(
+                  size: avatarSize,
+                  imageUrl: images[i],
+                  fullName: '?',
+                  fontSize: 10,
                 ),
               ),
             );

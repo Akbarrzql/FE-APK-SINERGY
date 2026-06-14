@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/feature/rating/user_rating_in_project.dart';
 
 class CollaboratorRatingCard extends StatelessWidget {
@@ -40,17 +41,11 @@ class CollaboratorRatingCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Avatar
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.grey[200],
-                  backgroundImage: (rating.ratedUserProfilePicture != null &&
-                          rating.ratedUserProfilePicture.toString().isNotEmpty)
-                      ? NetworkImage(rating.ratedUserProfilePicture.toString())
-                      : null,
-                  child: (rating.ratedUserProfilePicture == null ||
-                          rating.ratedUserProfilePicture.toString().isEmpty)
-                      ? const Icon(Icons.person, size: 22)
-                      : null,
+                ProfileAvatar(
+                  size: 44,
+                  imageUrl: rating.ratedUserProfilePicture?.toString(),
+                  fullName: rating.ratedUserName,
+                  fontSize: 16,
                 ),
                 const SizedBox(width: 12),
 

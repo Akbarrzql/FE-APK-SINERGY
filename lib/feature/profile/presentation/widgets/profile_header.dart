@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/feature/profile/model/profile_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -20,10 +21,11 @@ class ProfileHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 35,
-                backgroundColor: Colors.blueAccent,
-                child: _buildProfileAvatar(profile?.profilePicture),
+              ProfileAvatar(
+                imageUrl: profile?.profilePicture,
+                fullName: profile?.namaLengkap,
+                size: 70,
+                fontSize: 24,
               ),
               const SizedBox(width: 15),
               Expanded(
@@ -120,53 +122,6 @@ class ProfileHeader extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-
-  Widget _buildProfileAvatar(String? source) {
-    final imageUrl = source?.trim() ?? '';
-    if (imageUrl.isEmpty) {
-      return const Icon(Icons.person, color: Colors.white, size: 40);
-    }
-
-    if (imageUrl.startsWith('data:')) {
-      try {
-        final parts = imageUrl.split(',');
-        final b64 = parts.length > 1 ? parts[1] : '';
-        final bytes = base64Decode(b64);
-        return ClipOval(
-          child: Image.memory(
-            bytes,
-            fit: BoxFit.cover,
-            width: 70,
-            height: 70,
-          ),
-        );
-      } catch (_) {}
-    }
-
-    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-      try {
-        final bytes = base64Decode(imageUrl);
-        return ClipOval(
-          child: Image.memory(
-            bytes,
-            fit: BoxFit.cover,
-            width: 70,
-            height: 70,
-          ),
-        );
-      } catch (_) {}
-    }
-
-    return ClipOval(
-      child: Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        width: 70,
-        height: 70,
-        errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 40),
-      ),
-    );
   }
 
   // Fungsi helper untuk Ikon Sosmed dengan InkWell

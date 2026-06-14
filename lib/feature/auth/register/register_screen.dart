@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/widget/auth_text_field.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_state.dart';
@@ -130,20 +131,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  _AuthTextField(
+                  AuthTextField(
                     controller: _emailController,
                     hintText: 'Masukkan email',
                     keyboardType: TextInputType.emailAddress,
                     validator: _sharedCode.emailValidator,
                   ),
                   const SizedBox(height: 14),
-                  _AuthTextField(
+                  AuthTextField(
                     controller: _nameController,
                     hintText: 'Masukkan nama',
                     validator: _sharedCode.nameValidator,
                   ),
                   const SizedBox(height: 14),
-                  _AuthTextField(
+                  AuthTextField(
                     controller: _passwordController,
                     hintText: 'Masukkan password',
                     obscureText: _obscurePassword,
@@ -164,12 +165,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _AuthTextField(
+                  AuthTextField(
                     controller: _confirmPasswordController,
                     hintText: 'Konfirmasi password',
                     obscureText: _obscureConfirmPassword,
                     validator: (value) => _sharedCode.confirmPasswordValidator(
-                        value, _passwordController.text),
+                      value,
+                      _passwordController.text,
+                    ),
                     suffixIcon: IconButton(
                       onPressed: () {
                         setState(() {
@@ -182,32 +185,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             : Icons.visibility_outlined,
                         color: _subtitleColor,
                         size: 22,
-                      ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: isLoading
-                          ? null
-                          : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ResetPasswordScreen(
-                                    email: _emailController.text.trim(),
-                                  ),
-                                ),
-                              );
-                            },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Lupa Password?',
-                        style: TextStyle(color: Color(0xFF2F80ED)),
                       ),
                     ),
                   ),
@@ -365,74 +342,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-class _AuthTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final bool obscureText;
-  final Widget? suffixIcon;
-  final TextInputType keyboardType;
-  final String? Function(String?)? validator;
-
-  const _AuthTextField({
-    required this.controller,
-    required this.hintText,
-    this.obscureText = false,
-    this.suffixIcon,
-    this.keyboardType = TextInputType.text,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const Color borderColor = Color(0xFFD9DDE3);
-    const Color hintColor = Color(0xFFA7A7A7);
-    const Color textColor = Color(0xFF111111);
-
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: const TextStyle(
-        fontFamily: FontFamily.poppins,
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: textColor,
-      ),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(
-          fontFamily: FontFamily.poppins,
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: hintColor,
-        ),
-        suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: borderColor, width: 1.2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: borderColor, width: 1.2),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2F80ED), width: 1.4),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red, width: 1.2),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red, width: 1.2),
-        ),
-      ),
-    );
-  }
-}
+// Removed _AuthTextField as it is now using the global AuthTextField component

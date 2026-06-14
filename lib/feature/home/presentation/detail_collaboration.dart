@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
@@ -51,15 +52,11 @@ class MemberTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.grey[200],
-            backgroundImage: (imageUrl.isNotEmpty && imageUrl.startsWith('http'))
-                ? NetworkImage(imageUrl)
-                : null,
-            child: (imageUrl.isEmpty || !imageUrl.startsWith('http'))
-                ? const Icon(Icons.person, color: Colors.grey, size: 30)
-                : null,
+          ProfileAvatar(
+            imageUrl: imageUrl,
+            fullName: name,
+            size: 56,
+            fontSize: 18,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -445,6 +442,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
               ),
             ),
 
+            // ── Project Thumbnail ──────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -459,6 +457,47 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                     errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
                   )
                       : _buildPlaceholderImage(),
+                ),
+              ),
+            ),
+
+            // ── Project Owner Header ───────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                child: Row(
+                  children: [
+                    ProfileAvatar(
+                      imageUrl: widget.project.owner.profilePicture,
+                      fullName: widget.project.owner.fullName,
+                      size: 44,
+                      fontSize: 14,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.project.owner.fullName ?? 'Project Owner',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: ColorValue.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Project Owner',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: ColorValue.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

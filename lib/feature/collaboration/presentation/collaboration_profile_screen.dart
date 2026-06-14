@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/collaboration/model/collaboration_profile_model.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
@@ -358,11 +359,11 @@ class _CollaborationProfileScreenState extends State<CollaborationProfileScreen>
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.grey[100],
-                  backgroundImage: ownerImage != null && ownerImage.isNotEmpty ? NetworkImage(ownerImage) : null,
-                  child: ownerImage == null || ownerImage.isEmpty ? const Icon(Icons.person, size: 20, color: Colors.blue) : null,
+                ProfileAvatar(
+                  imageUrl: ownerImage,
+                  fullName: ownerName,
+                  size: 40,
+                  fontSize: 14,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -648,15 +649,11 @@ class MemberAvatarsWidget extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: CircleAvatar(
-                      radius: 13,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: (collaborators[i].profilePicture != null && collaborators[i].profilePicture!.isNotEmpty)
-                          ? NetworkImage(collaborators[i].profilePicture!)
-                          : null,
-                      child: (collaborators[i].profilePicture == null || collaborators[i].profilePicture!.isEmpty)
-                          ? const Icon(Icons.person, size: 12)
-                          : null,
+                    child: ProfileAvatar(
+                      size: 26,
+                      imageUrl: collaborators[i].profilePicture,
+                      fullName: collaborators[i].namaLengkap,
+                      fontSize: 10,
                     ),
                   ),
                 ),

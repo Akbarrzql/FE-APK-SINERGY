@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gabungyuk/feature/task/data/models/calendar_event_model.dart';
 import 'package:gabungyuk/feature/task/data/repositories/calendar_repository.dart';
@@ -8,6 +9,9 @@ import 'package:gabungyuk/core/common/auth_ui_helper.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
+import 'package:shimmer/shimmer.dart';
+
+import '../../../home/model/detail_project_model.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -24,11 +28,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
   int? selectedDay;
   
   late Future<CalendarEventModel> _calendarFuture;
+  Set<int>? _myProjectIds;
 
   @override
   void initState() {
     super.initState();
+    _fetchMyProjects();
     _loadEvents();
+  }
+
+  Future<void> _fetchMyProjects() async {
+    try {
+      final myProjects = await _collaborationService.getMyProjects();
+      if (mounted) {
+        setState(() {
+          _myProjectIds = myProjects.map((p) => p.id).toSet();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _myProjectIds = {};
+        });
+      }
+    }
   }
 
   void _loadEvents() {
@@ -293,6 +316,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
         Navigator.pop(context); // Pop loading
 
         final project = detailModel.data.project;
+        final collaborators = detailModel.data.collaborators;
+
+        // Cari owner yang sebenarnya dari daftar kolaborator
+        final ownerCollab = collaborators.firstWhere(
+          (c) => c.role.toUpperCase() == 'OWNER',
+          orElse: () => Collaborator(
+            collaborationId: 0,
+            idPengguna: 0,
+            namaLengkap: 'Unknown Owner',
+            email: '',
+            institusi: '',
+            bio: '',
+            keahlian: '',
+            lokasi: '',
+            role: 'OWNER',
+            status: '',
+            requestStatus: '',
+          ),
+        );
         
         // Map Project to Datum for DetailCollaboration
         final datum = Datum(
@@ -305,10 +347,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           projectPicture: project.projectPicture,
           deadline: project.deadline,
           owner: Owner(
-            id: profile.idPengguna,
-            fullName: profile.namaLengkap,
-            email: profile.email,
-            profilePicture: profile.profilePicture,
+            id: ownerCollab.idPengguna,
+            fullName: ownerCollab.namaLengkap,
+            email: ownerCollab.email,
+            profilePicture: ownerCollab.profilePicture,
           ),
           collaborators: [],
         );
@@ -337,9 +379,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return FutureBuilder<CalendarEventModel>(
       future: _calendarFuture,
       builder: (context, snapshot) {
-        final List<CalendarEvent> events = snapshot.data?.data ?? [];
-        final bool isLoading = snapshot.connectionState == ConnectionState.waiting;
+        List<CalendarEvent> events = snapshot.data?.data ?? [];
+        // Pastikan kita menunggu daftar project saya agar filter role bekerja dengan benar
+        final bool isLoading = snapshot.connectionState == ConnectionState.waiting || _myProjectIds == null;
         final bool hasError = snapshot.hasError;
+
+        // Terapkan logika filter: sembunyikan event yang sudah selesai jika user bukan owner
+        if (_myProjectIds != null) {
+          events = events.where((event) {
+            final isOwner = _myProjectIds!.contains(event.projectId);
+            // Jika project selesai (DONE/COMPLETED) dan user BUKAN owner, maka sembunyikan
+            if (!isOwner && event.isDone) {
+              return false;
+            }
+            return true;
+          }).toList();
+        }
 
         return RefreshIndicator(
           onRefresh: () async => _loadEvents(),
@@ -375,10 +430,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       _buildWeekDays(),
                       const SizedBox(height: 15),
                       isLoading
-                          ? const Center(child: Padding(
-                            padding: EdgeInsets.all(20.0),
-                            child: CircularProgressIndicator(color: Colors.white),
-                          ))
+                          ? _buildShimmerCalendar()
                           : hasError
                               ? Center(child: Text("Gagal memuat data", style: GoogleFonts.poppins(color: Colors.white)))
                               : _buildCalendarGrid(events),
@@ -455,6 +507,58 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Icon(icon, color: Colors.white, size: 20),
     ),
   );
+
+  Widget _buildShimmerCalendar() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: 35,
+      itemBuilder: (context, index) => Center(
+        child: Shimmer.fromColors(
+          baseColor: Colors.white.withOpacity(0.3),
+          highlightColor: Colors.white.withOpacity(0.1),
+          child: Container(
+            width: 35,
+            height: 35,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerEvents() {
+    return Column(
+      children: List.generate(3, (index) => Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Row(
+          children: [
+            const LoadingShimmer(width: 4, height: 50, borderRadius: 10),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const LoadingShimmer(width: 80, height: 10),
+                  const SizedBox(height: 8),
+                  const LoadingShimmer(width: double.infinity, height: 14),
+                  const SizedBox(height: 4),
+                  const LoadingShimmer(width: 60, height: 11),
+                ],
+              ),
+            ),
+          ],
+        ),
+      )),
+    );
+  }
 
   Widget _buildWeekDays() {
     final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -578,7 +682,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         const SizedBox(height: 20),
 
         if (isLoading && allEvents.isEmpty)
-          const Center(child: CircularProgressIndicator())
+          _buildShimmerEvents()
         else if (selectedDay == null)
           Center(
             child: Padding(

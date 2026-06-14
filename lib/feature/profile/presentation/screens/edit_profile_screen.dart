@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/feature/profile/model/profile_model.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/core/common/api_exception.dart';
@@ -321,9 +322,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     }
 
-    // If user removed image, show placeholder
+    // If user removed image, show placeholder with initials
     if (_imageRemoved || widget.profile == null || widget.profile!.profilePicture.isEmpty) {
-      return const Icon(Icons.person, size: 48, color: Colors.white);
+      return ProfileAvatar(
+        fullName: widget.profile?.namaLengkap,
+        size: 110,
+        fontSize: 32,
+      );
     }
 
     // Show existing profile picture from server

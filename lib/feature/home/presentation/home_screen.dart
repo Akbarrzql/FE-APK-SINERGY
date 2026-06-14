@@ -11,6 +11,7 @@ import 'package:gabungyuk/feature/notification/presentation/notification_screen.
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../core/common/color_value.dart';
 import '../../search/presentation/search_result_screen.dart';
@@ -138,22 +139,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProfileAvatar(String? source) {
-    final imageUrl = source?.trim() ?? '';
-    return ClipOval(
-      child: Container(
-        width: 52,
-        height: 52,
-        color: Colors.blue,
-        child: imageUrl.isEmpty
-            ? const Icon(Icons.person, color: Colors.white, size: 30)
-            : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                width: 52,
-                height: 52,
-                errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 30),
-              ),
-      ),
+    return ProfileAvatar(
+      imageUrl: source,
+      fullName: _profile?.namaLengkap,
+      size: 52,
+      fontSize: 16,
     );
   }
 

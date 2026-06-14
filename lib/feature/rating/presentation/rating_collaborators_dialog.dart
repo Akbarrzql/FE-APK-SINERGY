@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/feature/rating/bloc/rating_bloc.dart';
 import 'package:gabungyuk/feature/rating/bloc/rating_event.dart';
 
@@ -161,18 +162,11 @@ class _RatingCollaboratorsDialogState
                       Center(
                         child: Column(
                           children: [
-                            CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.grey[200],
-                              backgroundImage:
-                                  collaborator.profilePicture != null &&
-                                          collaborator.profilePicture!.isNotEmpty
-                                      ? NetworkImage(collaborator.profilePicture!)
-                                      : null,
-                              child: collaborator.profilePicture == null ||
-                                      collaborator.profilePicture!.isEmpty
-                                  ? const Icon(Icons.person, size: 40)
-                                  : null,
+                            ProfileAvatar(
+                              size: 80,
+                              imageUrl: collaborator.profilePicture,
+                              fullName: collaborator.userName,
+                              fontSize: 24,
                             ),
                             const SizedBox(height: 12),
                             Text(

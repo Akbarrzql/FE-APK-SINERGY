@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final detailProjectModel = detailProjectModelFromJson(jsonString);
-
 import 'dart:convert';
 
 import 'category_parser.dart';

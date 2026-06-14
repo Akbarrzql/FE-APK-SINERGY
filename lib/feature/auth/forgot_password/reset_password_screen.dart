@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/gen/fonts.gen.dart';
+import 'package:gabungyuk/core/widget/auth_text_field.dart';
 import '../../../core/common/color_value.dart';
 import '../../../core/common/shared_code.dart';
 import '../../../core/gen/assets.gen.dart';
@@ -19,6 +21,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   late final TextEditingController _emailController;
   bool _isSubmitting = false;
   final SharedCode _sharedCode = SharedCode();
+
+  static const Color _primaryBlue = Color(0xFF2F80ED);
+  static const Color _titleColor = Color(0xFF111111);
+  static const Color _subtitleColor = Color(0xFF9E9E9E);
 
   @override
   void initState() {
@@ -95,33 +101,30 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 const Text(
                   'Atur Ulang Kata Sandi',
                   style: TextStyle(
+                    fontFamily: FontFamily.poppins,
                     fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: ColorValue.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    color: _titleColor,
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'Masukkan email Anda. Kami akan mengirimkan link untuk mengatur ulang kata sandi Anda.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
+                    fontFamily: FontFamily.poppins,
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w400,
+                    color: _subtitleColor,
                     height: 1.5,
                   ),
                 ),
                 const SizedBox(height: 40),
-                TextFormField(
+                AuthTextField(
                   controller: _emailController,
+                  hintText: 'Masukkan email Anda',
                   keyboardType: TextInputType.emailAddress,
                   validator: _sharedCode.emailValidator,
-                  decoration: InputDecoration(
-                    hintText: 'Email Anda',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -130,16 +133,31 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   child: ElevatedButton(
                     onPressed: _isSubmitting ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorValue.primaryColor,
+                      backgroundColor: _primaryBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: _isSubmitting
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
                         : const Text(
                             'Kirim Link Pemulihan',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(
+                              fontFamily: FontFamily.poppins,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                   ),
                 ),

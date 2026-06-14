@@ -152,7 +152,7 @@ class FirebaseIntegrationService {
         );
 
         if (!context.mounted) return;
-        AuthUiHelper.showInfo(context, 'Login dibatalkan');
+        AuthUiHelper.showError(context, 'Login dibatalkan');
         return;
       }
 

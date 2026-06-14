@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../bloc/recap_bloc.dart';
@@ -21,9 +22,7 @@ class RecapScreen extends StatelessWidget {
       child: BlocBuilder<RecapBloc, RecapState>(
         builder: (context, state) {
           if (state is RecapLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF39D353)),
-            );
+            return _buildShimmerLoading();
           }
 
           if (state is RecapError) {
@@ -166,6 +165,54 @@ class RecapScreen extends StatelessWidget {
         _buildStatItem('Contribution Acts', recap.totalActivityCount.toString(), const Color(0xFF9A6700), Icons.bolt),
         _buildStatItem('Active Projects', activeCount.toString(), const Color(0xFF8250DF), Icons.rocket_launch_outlined),
       ],
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const LoadingShimmer(width: 200, height: 14),
+          const SizedBox(height: 12),
+          const LoadingShimmer(width: double.infinity, height: 150),
+          const SizedBox(height: 24),
+          const LoadingShimmer(width: 120, height: 16),
+          const SizedBox(height: 16),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.6,
+            children: List.generate(4, (index) => const LoadingShimmer(width: double.infinity, height: double.infinity, borderRadius: 16)),
+          ),
+          const SizedBox(height: 24),
+          const LoadingShimmer(width: 150, height: 16),
+          const SizedBox(height: 12),
+          ...List.generate(3, (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Row(
+              children: [
+                const LoadingShimmer(width: 30, height: 30, borderRadius: 15),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const LoadingShimmer(width: double.infinity, height: 13),
+                      const SizedBox(height: 4),
+                      const LoadingShimmer(width: 100, height: 11),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ),
     );
   }
 

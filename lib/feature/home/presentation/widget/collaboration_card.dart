@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import '../../../../core/common/color_value.dart';
 import '../../../collaboration/presentation/collaboration_profile_screen.dart';
 import 'member_avatar_stack.dart';
@@ -61,10 +62,11 @@ class CollaborationCard extends StatelessWidget {
             // Owner row
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: NetworkImage(ownerImageUrl),
-                  backgroundColor: Colors.grey[200],
+                ProfileAvatar(
+                  size: 40,
+                  imageUrl: ownerImageUrl,
+                  fullName: ownerName,
+                  fontSize: 14,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

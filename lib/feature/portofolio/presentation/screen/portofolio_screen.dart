@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/feature/portofolio/bloc/portofolio_bloc.dart';
 import 'package:gabungyuk/feature/portofolio/bloc/portofolio_event.dart';
 import 'package:gabungyuk/feature/portofolio/bloc/portofolio_state.dart';
+import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../repositories/portofolio_repository.dart';
 import '../widget/portofolio_card.dart';
 import 'package:gabungyuk/feature/portofolio/presentation/screen/portofolio_add_screen.dart';
@@ -68,7 +69,20 @@ class PortofolioScreen extends StatelessWidget {
                 child: BlocBuilder<PortofolioBloc, PortofolioState>(
                   builder: (context, state) {
                     if (state is PortofolioLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.7,
+                        ),
+                        itemCount: 6,
+                        itemBuilder: (context, index) => const LoadingShimmer(
+                          width: double.infinity,
+                          height: double.infinity,
+                          borderRadius: 16,
+                        ),
+                      );
                     }
 
                     if (state is PortofolioLoaded) {

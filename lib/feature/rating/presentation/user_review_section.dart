@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
+import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/feature/rating/model/user_rating_by_project_model.dart';
 
 class UserReviewSection extends StatelessWidget {
@@ -315,13 +316,11 @@ class ReviewTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Avatar
-        CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.grey.shade200,
-          backgroundImage: _imageProvider(review.ownerProfilePicture),
-          child: _imageProvider(review.ownerProfilePicture) == null
-              ? const Icon(Icons.person_rounded, size: 18, color: Colors.grey)
-              : null,
+        ProfileAvatar(
+          size: 36,
+          imageUrl: review.ownerProfilePicture,
+          fullName: review.ownerName,
+          fontSize: 14,
         ),
         const SizedBox(width: 12),
         // Content

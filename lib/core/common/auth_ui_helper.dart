@@ -193,7 +193,11 @@ class AuthUiHelper {
     if (lower.contains('failed to get id token') || lower.contains('gagal mendapatkan id token')) {
       return 'Gagal mendapatkan token dari Google/Firebase. Silakan coba lagi.';
     }
-    if (lower.contains('login dibatalkan') || lower.contains('cancel')) {
+    if (lower.contains('login dibatalkan') ||
+        lower.contains('sign_in_canceled') ||
+        lower.contains('sign_in_cancelled') ||
+        lower.contains('cancelled by user') ||
+        lower.contains('canceled by user')) {
       return 'Login dibatalkan.';
     }
 

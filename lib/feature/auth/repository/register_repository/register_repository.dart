@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/feature/auth/service/firebase_auth_token_service.dart';
 
@@ -185,7 +185,7 @@ class RegisterRepositoryImpl implements RegisterRepository {
 
   /// ✅ Convert Firebase Auth error ke pesan user-friendly
   String _getReadableAuthError(String errorCode) {
-    return AuthUiHelper.toIndonesianMessage(switch (errorCode) {
+    return AppUiHelper.toIndonesianMessage(switch (errorCode) {
       'weak-password' => 'Password terlalu lemah. Gunakan minimal 6 karakter.',
       'email-already-in-use' =>
         'Email sudah terdaftar. Silakan login atau gunakan email lain.',

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/widget/bottom_navigation.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/login_bloc/login_event.dart';
@@ -105,22 +105,21 @@ class _LoginScreenState extends State<LoginScreen> {
          }
        }
 
-       // ❌ Regular error - show snack bar
        if (!context.mounted) return;
-       AuthUiHelper.showError(context, errorMessage);
+       AppUiHelper.showError(context, AppUiHelper.readableError(errorMessage));
      } catch (e) {
        if (kDebugMode) {
          debugPrint('_handleLoginError: $e');
        }
        // Show original error
        if (!context.mounted) return;
-       AuthUiHelper.showError(context, errorMessage);
+       AppUiHelper.showError(context, AppUiHelper.readableError(errorMessage));
      }
    }
 
    /// 💡 Dialog untuk Google-only users
    void _showGoogleUserOptions(BuildContext context, String email) {
-     AuthUiHelper.showAppDialog(
+     AppUiHelper.showAppDialog(
        context: context,
        title: 'Akun Google Terdeteksi',
        content: const Text(
@@ -146,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
          TextButton(
            onPressed: () {
              Navigator.pop(context);
-             AuthUiHelper.showError(
+             AppUiHelper.showError(
                context,
                'Silakan gunakan tombol "Masuk dengan Google".',
              );
@@ -366,6 +365,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              try {
+                                await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
+                              } catch (e) {
+                                AppUiHelper.showError(
+                                  context,
+                                  AppUiHelper.readableError(
+                                    e,
+                                    fallback: 'Gagal masuk dengan Google. Silakan coba lagi.',
+                                  ),
+                                );
+                              }
+                            },
                       child: isLoading
                           ? const SizedBox(
                               height: 20,
@@ -390,21 +404,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ],
                             ),
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              try {
-                                await FirebaseIntegrationService.instance.signInWithGoogleAndSync(context);
-                              } catch (e) {
-                                AuthUiHelper.showError(
-                                  context,
-                                  AuthUiHelper.readableError(
-                                    e,
-                                    fallback: 'Gagal masuk dengan Google. Silakan coba lagi.',
-                                  ),
-                                );
-                              }
-                            },
                     ),
                   ),
 

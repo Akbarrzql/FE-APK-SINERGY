@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gabungyuk/feature/auth/service/firebase_password_service.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/reset_password_in_app_screen.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import '../../../core/gen/assets.gen.dart';
 
@@ -26,7 +26,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   Future<void> _verify() async {
     final code = _codeController.text.trim();
     if (code.isEmpty) {
-      AuthUiHelper.showError(context, 'Masukkan kode verifikasi.');
+      AppUiHelper.showError(context, 'Masukkan kode verifikasi.');
       return;
     }
 
@@ -36,7 +36,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
       await FirebasePasswordService.instance.verifyPasswordResetCode(code);
 
       if (!mounted) return;
-      AuthUiHelper.showSuccess(context, 'Verifikasi berhasil!');
+      AppUiHelper.showSuccess(context, 'Verifikasi berhasil!');
 
       // Navigate to password reset form
       Navigator.pushReplacement(
@@ -47,7 +47,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      AuthUiHelper.showError(
+      AppUiHelper.showError(
         context,
         e.toString().replaceFirst('Exception: ', ''),
       );

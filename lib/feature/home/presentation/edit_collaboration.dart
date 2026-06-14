@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import '../../../../core/common/color_value.dart';
@@ -138,7 +138,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
 
       if (sizeInMb > 10) {
         if (mounted) {
-          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+          AppUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
         }
         return;
       }
@@ -166,14 +166,14 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
     }
 
     if (_selectedCategories.isEmpty) {
-      AuthUiHelper.showError(context, 'Kategori wajib diisi.');
+      AppUiHelper.showError(context, 'Kategori wajib diisi.');
       return;
     }
 
     final id = widget.initialData?.id;
     if (id == null) {
       // If no id provided, inform user and abort.
-      AuthUiHelper.showError(context, 'ID kolaborasi tidak tersedia.');
+      AppUiHelper.showError(context, 'ID kolaborasi tidak tersedia.');
       return;
     }
 
@@ -228,7 +228,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
           if (!mounted) return;
 
           if (collaborators.isEmpty) {
-            AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+            AppUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
             Navigator.of(context).pop(true);
           } else {
             // Convert collaborators to CollaboratorInfo
@@ -246,17 +246,17 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
           }
         } catch (e) {
           if (!mounted) return;
-          AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+          AppUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
           Navigator.of(context).pop(true);
         }
       } else {
-        AuthUiHelper.showSuccess(context, 'Perubahan berhasil disimpan.');
+        AppUiHelper.showSuccess(context, 'Perubahan berhasil disimpan.');
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
-      AuthUiHelper.showError(context, AuthUiHelper.readableError(e));
+      AppUiHelper.showError(context, AppUiHelper.readableError(e));
     }
   }
 
@@ -275,7 +275,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
           projectId: projectId,
           collaborators: collaborators,
           onComplete: () {
-            AuthUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
+            AppUiHelper.showSuccess(context, 'Project berhasil selesaikan.');
             Navigator.of(context).pop(true);
           },
         ),
@@ -764,7 +764,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
       if (clean.isEmpty) continue;
 
       if (!SharedCode.isITSector(clean)) {
-        AuthUiHelper.showError(context, 'Kategori "$clean" harus dalam lingkup IT');
+        AppUiHelper.showError(context, 'Kategori "$clean" harus dalam lingkup IT');
         continue;
       }
 
@@ -854,7 +854,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   }
 
   void _showDeleteDialog(BuildContext context) {
-    AuthUiHelper.showAppDialog(
+    AppUiHelper.showAppDialog(
       context: context,
       title: 'Hapus Kolaborasi?',
       barrierDismissible: false,
@@ -882,7 +882,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
             Navigator.pop(context);
             final id = widget.initialData?.id;
             if (id == null) {
-              AuthUiHelper.showError(context, 'ID kolaborasi tidak tersedia.');
+              AppUiHelper.showError(context, 'ID kolaborasi tidak tersedia.');
               return;
             }
 
@@ -901,11 +901,11 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
               if (!mounted) return;
               Navigator.of(context).pop(); // remove loading
               Navigator.of(context).pop(true); // close editor and signal deletion
-              AuthUiHelper.showSuccess(context, 'Kolaborasi berhasil dihapus.');
+              AppUiHelper.showSuccess(context, 'Kolaborasi berhasil dihapus.');
             } catch (e) {
               if (!mounted) return;
               Navigator.of(context).pop();
-              AuthUiHelper.showError(context, AuthUiHelper.readableError(e));
+              AppUiHelper.showError(context, AppUiHelper.readableError(e));
             }
           },
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

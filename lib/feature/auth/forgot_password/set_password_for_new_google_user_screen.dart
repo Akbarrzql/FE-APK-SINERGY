@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
@@ -123,7 +123,7 @@ class _SetPasswordForNewGoogleUserScreenState
 
       if (!context.mounted) return;
 
-      AuthUiHelper.showSuccess(context, 'Kata sandi berhasil diatur! Selamat datang.');
+      AppUiHelper.showSuccess(context, 'Kata sandi berhasil diatur! Selamat datang.');
 
       Future.delayed(const Duration(seconds: 2), () {
         if (!context.mounted) return;
@@ -151,7 +151,7 @@ class _SetPasswordForNewGoogleUserScreenState
 
       if (!context.mounted) return;
       _showError(
-        AuthUiHelper.readableError(
+        AppUiHelper.readableError(
           e,
           fallback: 'Gagal mengatur kata sandi. Silakan coba lagi.',
         ),
@@ -162,7 +162,7 @@ class _SetPasswordForNewGoogleUserScreenState
   }
 
   void _showError(String message) {
-    AuthUiHelper.showError(context, message);
+    AppUiHelper.showError(context, message);
   }
 
   @override

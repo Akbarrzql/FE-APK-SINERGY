@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/firebase_user_sync_helper.dart';
 import 'package:gabungyuk/feature/auth/service/firebase_auth_token_service.dart';
 
@@ -73,8 +73,8 @@ class LoginRepositoryImpl implements LoginRepository {
       if (kDebugMode) {
         debugPrint('LOGIN: Firebase auth exception: ${e.code} - $e');
       }
-
-      throw Exception(_getReadableAuthError(e.code));
+      // Langsung lempar kode error agar diproses oleh AppUiHelper.readableError
+      throw e;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('LOGIN: Unexpected error: $e');
@@ -126,7 +126,6 @@ class LoginRepositoryImpl implements LoginRepository {
     }
   }
 
-  /// ✅ Simpan user profile ke Firestore
   Future<void> _syncUserToFirestore({
     required String uid,
     required String email,
@@ -181,11 +180,10 @@ class LoginRepositoryImpl implements LoginRepository {
     }
   }
 
-  /// ✅ Convert Firebase Auth error ke pesan user-friendly
   String _getReadableAuthError(String errorCode) {
-    return AuthUiHelper.toIndonesianMessage(
+    return AppUiHelper.toIndonesianMessage(
       switch (errorCode) {
-        'user-not-found' => 'Email tidak terdaftar. Silakan daftar terlebih dahulu.',
+        'user-not-found' || 'invalid-credential' => 'Email atau password salah. Silakan coba lagi.',
         'wrong-password' => 'Password salah. Silakan coba lagi.',
         'invalid-email' => 'Format email tidak valid.',
         'user-disabled' => 'Akun ini telah dinonaktifkan.',

@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/feature/profile/model/profile_model.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
@@ -159,10 +159,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return BlocListener<ProfileBloc, ProfileState>(
       listener: (context, state) {
         if (state is ProfileUpdateSuccess) {
-          AuthUiHelper.showSuccess(context, state.message);
+          AppUiHelper.showSuccess(context, state.message);
           Navigator.of(context).pop(true);
         } else if (state is ProfileError) {
-          AuthUiHelper.showError(context, state.message);
+          AppUiHelper.showError(context, state.message);
         }
       },
       child: PopScope(
@@ -390,7 +390,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showImageSourceActionSheet() {
-    AuthUiHelper.showAppBottomSheet(
+    AppUiHelper.showAppBottomSheet(
       context: context,
       title: 'Pilih Foto Profil',
       child: Column(
@@ -445,7 +445,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (sizeInMb > 10) {
         if (mounted) {
-          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+          AppUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
         }
         return;
       }
@@ -455,9 +455,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _imageRemoved = false;
       });
     } catch (e) {
-      AuthUiHelper.showError(
+      AppUiHelper.showError(
         context,
-        AuthUiHelper.readableError(
+        AppUiHelper.readableError(
           e,
           fallback: 'Gagal memilih gambar. Silakan coba lagi.',
         ),
@@ -492,7 +492,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (sizeInMb > 10) {
         if (mounted) {
-          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+          AppUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
         }
         return;
       }
@@ -502,9 +502,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _imageRemoved = false;
       });
     } catch (e) {
-      AuthUiHelper.showError(
+      AppUiHelper.showError(
         context,
-        AuthUiHelper.readableError(
+        AppUiHelper.readableError(
           e,
           fallback: 'Gagal mengambil gambar. Silakan coba lagi.',
         ),
@@ -513,7 +513,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showPermissionDeniedDialog(String permissionName, String message) {
-    AuthUiHelper.showAppDialog(
+    AppUiHelper.showAppDialog(
       context: context,
       title: 'Izin Diperlukan',
       content: Text(
@@ -534,7 +534,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showPermissionPermanentlyDeniedDialog(String permissionName) {
-    AuthUiHelper.showAppDialog(
+    AppUiHelper.showAppDialog(
       context: context,
       title: 'Izin Ditolak Secara Permanen',
       content: Text(
@@ -652,7 +652,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (clean.isEmpty) continue;
 
       if (!SharedCode.isITSector(clean)) {
-        AuthUiHelper.showError(context, 'Keahlian "$clean" harus dalam lingkup IT');
+        AppUiHelper.showError(context, 'Keahlian "$clean" harus dalam lingkup IT');
         continue;
       }
 

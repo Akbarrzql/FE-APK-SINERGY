@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import '../../../../core/common/color_value.dart';
@@ -69,7 +69,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
 
       if (sizeInMb > 10) {
         if (mounted) {
-          AuthUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
+          AppUiHelper.showError(context, 'Ukuran gambar maksimal adalah 10MB');
         }
         return;
       }
@@ -97,7 +97,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
     }
 
     if (_selectedCategories.isEmpty) {
-      AuthUiHelper.showError(context, 'Kategori wajib diisi.');
+      AppUiHelper.showError(context, 'Kategori wajib diisi.');
       return;
     }
 
@@ -129,12 +129,12 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
 
       if (!mounted) return;
       Navigator.of(context).pop(); // remove loading
-      AuthUiHelper.showSuccess(context, 'Proyek berhasil dibuat.');
+      AppUiHelper.showSuccess(context, 'Proyek berhasil dibuat.');
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop(); // remove loading
-      AuthUiHelper.showError(context, e.toString());
+      AppUiHelper.showError(context, AppUiHelper.readableError(e));
     }
   }
 
@@ -518,7 +518,7 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
       if (clean.isEmpty) continue;
 
       if (!SharedCode.isITSector(clean)) {
-        AuthUiHelper.showError(context, 'Kategori "$clean" harus dalam lingkup IT');
+        AppUiHelper.showError(context, 'Kategori "$clean" harus dalam lingkup IT');
         continue;
       }
 

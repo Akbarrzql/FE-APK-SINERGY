@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/widget/profile_avatar.dart';
 import 'package:gabungyuk/feature/rating/bloc/rating_bloc.dart';
 import 'package:gabungyuk/feature/rating/bloc/rating_event.dart';
@@ -62,7 +62,7 @@ class _RatingCollaboratorsDialogState
     // Validate all ratings are filled
     final incompleteRatings = _ratings.where((r) => r.rating == 0).toList();
     if (incompleteRatings.isNotEmpty) {
-      AuthUiHelper.showError(context, 'Masukkan rating untuk semua collaborator');
+      AppUiHelper.showError(context, 'Masukkan rating untuk semua collaborator');
       return;
     }
 
@@ -93,7 +93,7 @@ class _RatingCollaboratorsDialogState
         Navigator.pop(context); // close loading
         Navigator.pop(context); // close dialog
         widget.onComplete();
-        AuthUiHelper.showSuccess(
+        AppUiHelper.showSuccess(
             context, 'Semua rating berhasil disimpan');
       }
     });

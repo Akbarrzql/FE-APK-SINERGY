@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/auth/service/firebase_password_service.dart';
 import '../../../../core/common/color_value.dart';
@@ -41,11 +41,11 @@ class _EditPasswordScreenState extends State<EditPasswordScreen> {
       );
 
       if (!mounted) return;
-      AuthUiHelper.showSuccess(context, 'Kata Sandi berhasil diperbarui.');
+      AppUiHelper.showSuccess(context, 'Kata Sandi berhasil diperbarui.');
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      AuthUiHelper.showError(
+      AppUiHelper.showError(
         context,
         e.toString().replaceFirst('Exception: ', ''),
       );

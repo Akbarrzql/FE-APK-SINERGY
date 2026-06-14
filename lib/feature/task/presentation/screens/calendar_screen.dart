@@ -5,7 +5,7 @@ import 'package:gabungyuk/feature/task/data/models/calendar_event_model.dart';
 import 'package:gabungyuk/feature/task/data/repositories/calendar_repository.dart';
 import 'package:gabungyuk/feature/home/service/collaboration_service.dart';
 import 'package:gabungyuk/feature/home/presentation/detail_collaboration.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/feature/profile/repository/profile_repository.dart';
 import 'package:gabungyuk/feature/home/model/view_project_model.dart';
 import 'package:gabungyuk/feature/profile/model/view_profile_model.dart';
@@ -369,7 +369,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     } catch (e) {
       if (mounted) {
         if (Navigator.canPop(context)) Navigator.pop(context); // Pop loading
-        AuthUiHelper.showError(context, "Gagal memuat detail proyek: $e");
+        AppUiHelper.showError(context, AppUiHelper.readableError(e));
       }
     }
   }

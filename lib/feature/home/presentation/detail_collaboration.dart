@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
 import 'package:gabungyuk/core/widget/profile_avatar.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/home/presentation/widget/skill_tag.dart';
 
@@ -851,12 +851,12 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                           await _collaborationService.requestJoin(widget.project.id);
                           await _markAsRequestedLocally();
                           if (mounted) {
-                            AuthUiHelper.showSuccess(context, 'Berhasil mengirim permintaan bergabung');
+                            AppUiHelper.showSuccess(context, 'Berhasil mengirim permintaan bergabung');
                             _fetchProjectDetail();
                           }
                         } catch (e) {
                           if (mounted) {
-                            AuthUiHelper.showError(context, 'Terjadi kesalahan: $e');
+                            AppUiHelper.showError(context, AppUiHelper.readableError(e));
                             setState(() => _isLoading = false);
                           }
                         }
@@ -900,19 +900,19 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
         action: action,
       );
       if (mounted) {
-        AuthUiHelper.showSuccess(context, 'Berhasil ${action == 'ACCEPT' ? 'menerima' : 'menolak'} permintaan.');
+        AppUiHelper.showSuccess(context, 'Berhasil ${action == 'ACCEPT' ? 'menerima' : 'menolak'} permintaan.');
         _fetchProjectDetail();
       }
     } catch (e) {
       if (mounted) {
-        AuthUiHelper.showError(context, 'Gagal memproses aksi: $e');
+        AppUiHelper.showError(context, AppUiHelper.readableError(e));
         setState(() => _isLoading = false);
       }
     }
   }
 
   void _showStatusPicker(BuildContext context) {
-    AuthUiHelper.showAppBottomSheet(
+    AppUiHelper.showAppBottomSheet(
       context: context,
       title: 'Pilih Status',
       child: Column(
@@ -946,7 +946,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                   );
 
                   if (mounted) {
-                    AuthUiHelper.showSuccess(context, 'Status diperbarui ke $s');
+                    AppUiHelper.showSuccess(context, 'Status diperbarui ke $s');
                   }
 
                   if (newBackendStatus == 'COMPLETED' && oldBackendStatus != 'COMPLETED') {
@@ -955,7 +955,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                 } catch (e) {
                   if (mounted) {
                     setState(() => _projectStatus = oldStatus);
-                    AuthUiHelper.showError(context, 'Gagal memperbarui status: $e');
+                    AppUiHelper.showError(context, AppUiHelper.readableError(e));
                   }
                 }
               },
@@ -995,7 +995,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
       if (!mounted) return;
 
       if (collaborators.isEmpty) {
-        AuthUiHelper.showSuccess(context, 'Project berhasil diselesaikan.');
+        AppUiHelper.showSuccess(context, 'Project berhasil diselesaikan.');
         return;
       }
 
@@ -1020,7 +1020,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
             collaborators: collaboratorInfos,
             onComplete: () {
               if (mounted) {
-                AuthUiHelper.showSuccess(context, 'Semua rating berhasil disimpan.');
+                AppUiHelper.showSuccess(context, 'Semua rating berhasil disimpan.');
               }
             },
           ),
@@ -1029,7 +1029,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
     } catch (e) {
       if (!mounted) return;
       debugPrint('Error opening completion rating dialog: $e');
-      AuthUiHelper.showSuccess(context, 'Project berhasil diselesaikan.');
+      AppUiHelper.showSuccess(context, 'Project berhasil diselesaikan.');
     }
   }
 

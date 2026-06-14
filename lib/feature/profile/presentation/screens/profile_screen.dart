@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/common/auth_session_manager.dart';
 import 'package:gabungyuk/core/common/color_value.dart';
 import 'package:gabungyuk/feature/auth/forgot_password/edit_password_screen.dart';
@@ -87,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: BlocListener<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileError) {
-            AuthUiHelper.showError(context, state.message);
+            AppUiHelper.showError(context, state.message);
           }
           if (state is ProfileLoaded) {
             _loadUserRatings(state.profile.idPengguna);
@@ -288,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     isLogout: true,
                     isLast: true,
                     onTap: () async {
-                      final confirm = await AuthUiHelper.showAppDialog<bool>(
+                      final confirm = await AppUiHelper.showAppDialog<bool>(
                         context: context,
                         title: 'Konfirmasi',
                         content: const Text(

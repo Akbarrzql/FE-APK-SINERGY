@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gabungyuk/core/common/shared_code.dart';
 import 'package:gabungyuk/feature/auth/service/firebase_password_service.dart';
 import '../../../../core/gen/assets.gen.dart';
-import '../../../core/common/auth_ui_helper.dart';
+import '../../../core/common/app_ui_helper.dart';
 import '../../../core/common/color_value.dart';
 import 'otp_verify_screen.dart';
 
@@ -37,7 +37,7 @@ class _OtpRequestScreenState extends State<OtpRequestScreen> {
 
       if (!mounted) return;
       
-      AuthUiHelper.showSuccess(
+      AppUiHelper.showSuccess(
         context, 
         'Email reset password telah dikirim ke $email. Silakan periksa kotak masuk atau spam.'
       );
@@ -50,7 +50,7 @@ class _OtpRequestScreenState extends State<OtpRequestScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      AuthUiHelper.showError(
+      AppUiHelper.showError(
         context,
         e.toString().replaceFirst('Exception: ', '')
       );

@@ -5,7 +5,7 @@ import '../../../core/common/color_value.dart';
 import '../../../core/common/shared_code.dart';
 import '../../../core/gen/assets.gen.dart';
 import 'package:gabungyuk/feature/auth/service/firebase_password_service.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String? email;
@@ -49,7 +49,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       await FirebasePasswordService.instance.sendPasswordResetEmail(email);
 
       if (!mounted) return;
-      AuthUiHelper.showSuccess(
+      AppUiHelper.showSuccess(
         context, 
         'Link pemulihan telah dikirim ke email Anda. Silakan periksa kotak masuk atau folder spam.'
       );
@@ -57,9 +57,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      AuthUiHelper.showError(
+      AppUiHelper.showError(
         context,
-        AuthUiHelper.readableError(
+        AppUiHelper.readableError(
           e,
           fallback: 'Gagal mengirim email. Pastikan email Anda benar dan terdaftar.',
         ),

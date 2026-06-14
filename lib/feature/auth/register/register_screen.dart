@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 import 'package:gabungyuk/core/widget/auth_text_field.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_bloc.dart';
 import 'package:gabungyuk/feature/auth/bloc/register_bloc/register_event.dart';
@@ -69,7 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (state is RegisterPageLoaded) {
               FocusManager.instance.primaryFocus?.unfocus();
 
-              AuthUiHelper.showSuccess(context, 'Registrasi berhasil! Silakan masuk.');
+              AppUiHelper.showSuccess(context, 'Registrasi berhasil! Silakan masuk.');
               
               Navigator.pushReplacement(
                 context,
@@ -78,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               );
             } else if (state is RegisterPageError) {
-              AuthUiHelper.showError(context, state.errorMessage);
+              AppUiHelper.showError(context, state.errorMessage);
             }
           },
           builder: (context, state) {
@@ -283,9 +283,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 await FirebaseIntegrationService.instance
                                     .signInWithGoogleAndSync(context);
                               } catch (e) {
-                                AuthUiHelper.showError(
+                                AppUiHelper.showError(
                                   context,
-                                  AuthUiHelper.readableError(
+                                  AppUiHelper.readableError(
                                     e,
                                     fallback:
                                         'Gagal masuk dengan Google. Silakan coba lagi.',

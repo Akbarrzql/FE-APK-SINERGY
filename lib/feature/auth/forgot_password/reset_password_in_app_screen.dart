@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gabungyuk/core/widget/loading_shimmer.dart';
-import 'package:gabungyuk/core/common/auth_ui_helper.dart';
+import 'package:gabungyuk/core/common/app_ui_helper.dart';
 
 class ResetPasswordInAppScreen extends StatefulWidget {
   final String oobCode;
@@ -38,7 +38,7 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
     } catch (e) {
       if (kDebugMode) debugPrint('verifyPasswordResetCode error: $e');
       if (mounted) {
-        AuthUiHelper.showError(context, 'Tautan reset tidak valid atau sudah kedaluwarsa.');
+        AppUiHelper.showError(context, 'Tautan reset tidak valid atau sudah kedaluwarsa.');
       }
       Navigator.of(context).pop();
     }
@@ -48,11 +48,11 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
      final newPwd = _newPasswordController.text;
      final confirm = _confirmController.text;
      if (newPwd.length < 6) {
-        AuthUiHelper.showError(context, 'Kata sandi minimal 6 karakter.');
+        AppUiHelper.showError(context, 'Kata sandi minimal 6 karakter.');
        return;
      }
      if (newPwd != confirm) {
-        AuthUiHelper.showError(context, 'Kata sandi tidak cocok.');
+        AppUiHelper.showError(context, 'Kata sandi tidak cocok.');
        return;
      }
      if (_email == null) return;
@@ -68,7 +68,7 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
         );
 
         if (mounted) {
-          AuthUiHelper.showSuccess(
+          AppUiHelper.showSuccess(
             context,
             'Kata sandi berhasil diubah. Silakan masuk kembali.'
           );
@@ -77,9 +77,9 @@ class _ResetPasswordInAppScreenState extends State<ResetPasswordInAppScreen> {
       } catch (e) {
         if (kDebugMode) debugPrint('RESET PASSWORD error: $e');
         if (mounted) {
-          AuthUiHelper.showError(
+          AppUiHelper.showError(
             context,
-            AuthUiHelper.readableError(
+            AppUiHelper.readableError(
               e,
               fallback: 'Gagal mengubah kata sandi. Silakan coba lagi.',
             ),

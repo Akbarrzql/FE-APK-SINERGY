@@ -254,8 +254,8 @@ class _CreateCollaborationPageState extends State<CreateCollaborationPage> {
                       const SizedBox(height: 16),
 
                       // Kategori
-                       // Repository Link
-                       _buildLabel('Repository Link'),
+                       // Link Proyek
+                       _buildLabel('Link Proyek'),
                        const SizedBox(height: 6),
                        _buildTextField(
                          controller: _repoController,

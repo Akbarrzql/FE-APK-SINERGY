@@ -147,7 +147,12 @@ class AppUiHelper {
 
   static String readableError(Object error, {String? fallback}) {
     if (error is ApiException) {
-      return error.message;
+      if (error.statusCode != null) {
+        if (error.statusCode == 500 || error.statusCode == 502) {
+          return toIndonesianMessage(error.statusCode.toString());
+        }
+      }
+      return toIndonesianMessage(error.message, fallback: fallback);
     }
     
     String errorString = error.toString();

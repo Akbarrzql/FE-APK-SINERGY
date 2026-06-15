@@ -51,6 +51,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
   late final TextEditingController _repoController;
   final FocusNode _categoryFocusNode = FocusNode();
   final List<String> _selectedCategories = [];
+  final SharedCode _sharedCode = SharedCode();
 
   late String _selectedStatus;
   String? _newImagePath; // path lokal jika user ganti gambar
@@ -473,17 +474,15 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
 
                       const SizedBox(height: 16),
 
-                       // Repository Link
-                       _buildLabel('Repository Link'),
+                       // Link Proyek
+                       _buildLabel('Link Proyek'),
                        const SizedBox(height: 6),
                        _buildTextField(
                          controller: _repoController,
                          hint: 'https://github.com/...',
                          keyboardType: TextInputType.url,
                          prefixIcon: Icons.code_rounded,
-                         validator: (v) => (v == null || v.isEmpty)
-                             ? 'Link repository wajib diisi'
-                             : null,
+                         validator: _sharedCode.urlValidator,
                        ),
 
                       const SizedBox(height: 16),
@@ -509,7 +508,7 @@ class _EditCollaborationPageState extends State<EditCollaborationPage> {
 
                        const SizedBox(height: 16),
 
-                       // Repository Link (moved)
+                       // Link Proyek (moved)
 
                       const SizedBox(height: 32),
 

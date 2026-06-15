@@ -169,7 +169,7 @@ class _PortofolioAddScreenState extends State<PortofolioAddScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                _buildInputLabel("Tautan Eksternal"),
+                _buildInputLabel("Tautan Proyek"),
                 TextFormField(
                   controller: _fileUrlController,
                   style: const TextStyle(fontSize: 15, color: Colors.black87),

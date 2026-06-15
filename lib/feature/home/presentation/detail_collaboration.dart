@@ -461,47 +461,6 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
               ),
             ),
 
-            // ── Project Owner Header ───────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-                child: Row(
-                  children: [
-                    ProfileAvatar(
-                      imageUrl: widget.project.owner.profilePicture,
-                      fullName: widget.project.owner.fullName,
-                      size: 44,
-                      fontSize: 14,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.project.owner.fullName ?? 'Project Owner',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: ColorValue.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Project Owner',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: ColorValue.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
             // ── Project Info ───────────────────────────────────────────────
@@ -662,7 +621,7 @@ class _DetailCollaborationState extends State<DetailCollaboration> {
                       const SizedBox(height: 12),
                       _buildDetailItem(
                         icon: Icons.link_rounded,
-                        label: 'Link Repository',
+                        label: 'Link Proyek',
                         value: project?.repositoryLink ?? widget.project.repositoryLink ?? 'Tidak ada link',
                         onTap: () async {
                           final link = project?.repositoryLink ?? widget.project.repositoryLink;

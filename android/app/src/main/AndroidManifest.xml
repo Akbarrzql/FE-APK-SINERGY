@@ -8,7 +8,7 @@
     <application
         android:label="gabungyuk"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
 
         <!-- Set default notification icon and color -->
         <meta-data
